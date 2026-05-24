@@ -4,69 +4,263 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * MAP DATA (map/data/MapData.java)
- * ----------------------------------
- * Pure data registry: world size + all building definitions.
- * Contains ZERO rendering, ZERO AWT/Swing/JavaFX/LWJGL code.
- *
- * This is the canonical data source for the campus.
- * Both CampusMap (2D legacy) and any future 3D world loader
- * will pull from this single registry.
- *
- * HOW TO ADD A BUILDING:
- *   Add one entry to BUILDINGS below. That's it.
- *   No other file needs to change.
- *
- * COLOR FORMAT: 0xFFRRGGBB packed ARGB integer
- *   e.g. 0xFF8E44AD = fully opaque purple
- *        0xFF27AE60 = fully opaque green
- *
- * COORDINATE SYSTEM:
- *   x = east-west   (screen X in 2D)
- *   z = north-south (screen Y in 2D)
- *   All values in world units (1 unit = 1 pixel at 2D zoom level)
- *
- * FUTURE:
- *   Replace this static array with a JSON loader:
- *   List<BuildingData> = GsonLoader.load("assets/campus_map.json")
- */
 public class MapData {
 
     // ---------------------------------------------------------------
     // WORLD SIZE
     // ---------------------------------------------------------------
-    public static final int WORLD_WIDTH  = 2000;
-    public static final int WORLD_HEIGHT = 1600;
+    public static final int WORLD_WIDTH  = 3000;
+    public static final int WORLD_HEIGHT = 2400;
 
-    // ---------------------------------------------------------------
-    // BUILDING REGISTRY
-    //
-    // new BuildingData(
-    //   "NAME",
-    //   x,   z,         ← top-left corner (world units)
-    //   width, depth,   ← footprint size
-    //   floors,         ← determines 3D height
-    //   0xFFRRGGBB,     ← roof/wall color
-    //   collisionEnabled,
-    //   "tag"           ← optional category
-    // )
-    // ---------------------------------------------------------------
     public static final List<BuildingData> BUILDINGS;
 
     static {
         List<BuildingData> list = new ArrayList<>();
+// WEST SIDE
+        list.add(new BuildingData(
+                "GYM",
+                620, 470,
+                260, 180,
+                1,
+                0xFF8E44AD,
+                true,
+                "gym"
+        ));
 
-        list.add(new BuildingData("GYM",          120,  120, 160, 120, 1, 0xFF8E44AD, true,  "gym"));
-        list.add(new BuildingData("ELEM BLDG",    350,  100, 180, 100, 2, 0xFF27AE60, true,  "academic"));
-        list.add(new BuildingData("SAL BLDG",     600,   90, 140, 110, 3, 0xFF2980B9, true,  "academic"));
-        list.add(new BuildingData("LRAC",         820,  100, 170, 130, 2, 0xFFE74C3C, true,  "resource"));
-        list.add(new BuildingData("RTL BLDG",    1060,  110, 150, 100, 2, 0xFFE67E22, true,  "academic"));
-        list.add(new BuildingData("GLE BLDG",     120,  340, 160, 120, 2, 0xFF16A085, true,  "academic"));
-        list.add(new BuildingData("ACAD BLDG",    380,  330, 220, 150, 4, 0xFF3498DB, true,  "academic"));
-        list.add(new BuildingData("NGE BLDG",     700,  320, 160, 130, 3, 0xFFF39C12, true,  "academic"));
-        list.add(new BuildingData("ALLIED BLDG",  960,  310, 180, 140, 3, 0xFFC0392B, true,  "academic"));
-        list.add(new BuildingData("P.E AREA",     200,  580, 300, 200, 1, 0xFF27AE60, false, "pe"));
+        list.add(new BuildingData(
+                "SAL BLDG",
+                620, 710,
+                120, 300,
+                3,
+                0xFF2980B9,
+                true,
+                "academic"
+        ));
+
+        list.add(new BuildingData(
+                "ALLIED BLDG",
+                540, 1110,
+                180, 520,
+                3,
+                0xFFC0392B,
+                true,
+                "academic"
+        ));
+
+// NORTH
+        list.add(new BuildingData(
+                "ELEM BLDG",
+                1040, 430,
+                420, 120,
+                2,
+                0xFF27AE60,
+                -6f,
+                true,
+                "academic"
+        ));
+
+// CENTER
+        list.add(new BuildingData(
+                "P.E AREA",
+                1020, 670,
+                260, 180,
+                1,
+                0xFF27AE60,
+                false,
+                "pe"
+        ));
+
+        list.add(new BuildingData(
+                "LRAC",
+                980, 970,
+                320, 140,
+                2,
+                0xFFE74C3C,
+                true,
+                "resource"
+        ));
+
+
+        list.add(new BuildingData(
+                "RTL BLDG",
+                930, 1190,
+                420, 55,
+                2,
+                0xFFE67E22,
+                true,
+                "academic"
+        ));
+
+        // RTL BLDG - thick rectangle doughnut
+// Much thicker school hallways
+
+        list.add(new BuildingData(
+                "RTL BLDG 1",
+                930, 1190,
+                420, 80,
+                2,
+                0xFFE67E22,
+                true,
+                "academic"
+        ));
+
+        list.add(new BuildingData(
+                "RTL BLDG 2",
+                930, 1370,
+                420, 80,
+                2,
+                0xFFE67E22,
+                true,
+                "academic"
+        ));
+
+        list.add(new BuildingData(
+                "RTL BLDG 3",
+                930, 1270,
+                80, 100,
+                2,
+                0xFFE67E22,
+                true,
+                "academic"
+        ));
+
+        list.add(new BuildingData(
+                "RTL BLDG 4",
+                1270, 1270,
+                80, 100,
+                2,
+                0xFFE67E22,
+                true,
+                "academic"
+        ));
+
+// EAST SIDE
+        // ACAD / Engineering Building - long upper building
+        list.add(new BuildingData(
+                "ACAD BLDG",
+
+                new int[]{ // X
+                        1580, // A
+                        1590, // B
+                        1600,
+                        1610,
+                        1680,
+                        1660,
+                        1905,
+                        1900
+                },
+
+                new int[]{ // Y
+                        850, // A
+                        780,
+                        780,
+                        670,
+                        675,
+                        780,
+                        810,
+                        880
+                },
+                4,
+                0xFF3498DB,
+                4f,
+                true,
+                "academic"
+        ));
+
+        list.add(new BuildingData(
+                "GLE BLDG",
+
+                new int[] { // X
+                        1630, // C
+                        1900, // D
+                        1890, // E
+                        1800, // F
+                        1680, // B
+                        1640  // A
+                },
+
+                new int[] { // Y
+                        880, // C
+                        890, // D
+                        1080, // E
+                        1100, // F
+                        1310, // B
+                        1150  // A
+                },
+
+                2,
+                0xFF16A085,
+                2f,
+                true,
+                "academic"
+        ));
+
+        list.add(new BuildingData(
+                "GLE Firewall",
+
+                new int[] { // X
+                        1915, // B
+                        1975, // C
+                        1960, // D
+                        1900  // A
+                },
+
+                new int[] { // Y
+                        805, // B
+                        815, // C
+                        1050, // D
+                        1050 // A
+                },
+
+                2,
+                0xFF16A085,
+                2f,
+                true,
+                "wall"
+        ));
+
+        // NGE BLDG - smaller but still thick rectangle doughnut
+
+        list.add(new BuildingData(
+                "NGE BLDG 1",
+                1100, 1530,
+                230, 70,
+                4,
+                0xFFF39C12,
+                true,
+                "academic"
+        ));
+
+        list.add(new BuildingData(
+                "NGE BLDG 2",
+                1100, 1705,
+                230, 70,
+                4,
+                0xFFF39C12,
+                true,
+                "academic"
+        ));
+
+        list.add(new BuildingData(
+                "NGE BLDG 3",
+                1100, 1600,
+                90, 110,
+                4,
+                0xFFF39C12,
+                true,
+                "academic"
+        ));
+
+        list.add(new BuildingData(
+                "NGE BLDG 4",
+                1280, 1600,
+                90, 110,
+                4,
+                0xFFF39C12,
+                true,
+                "academic"
+        ));
+
 
         BUILDINGS = Collections.unmodifiableList(list);
     }

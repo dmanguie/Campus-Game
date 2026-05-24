@@ -1,6 +1,9 @@
 package com.campusgame.engine;
 
 import com.campusgame.core.GameWorld;
+import com.campusgame.editor.EditorInputAdapter;
+import com.campusgame.editor.EditorMode;
+import com.campusgame.editor.EditorOverlayRenderer;
 import com.campusgame.entities.Player;
 import com.campusgame.input.InputHandler;
 import com.campusgame.map.CampusMap;
@@ -12,30 +15,16 @@ import com.campusgame.renderer.swing2d.SwingRenderer2D;
 
 import javax.swing.*;
 
-/**
- * GAME LOOP (engine/GameLoop.java)
- * ---------------------------------
- * PHASE 2 CHANGES:
- *  - Now owns a GameWorld (entity registry) alongside the existing subsystems
- *  - Uses IRenderer interface instead of direct Renderer reference
- *  - SwingRenderer2D wraps the existing Renderer — 2D game still works identically
- *  - To switch to 3D later: change ONE line (new LwjglRenderer3D(...))
- *
- * UNCHANGED:
- *  - Fixed-timestep loop
- *  - Window creation
- *  - update() order: input → move → collide → camera
- */
 public class GameLoop implements Runnable {
 
     public static final int    WINDOW_WIDTH  = 1280;
     public static final int    WINDOW_HEIGHT = 720;
-    public static final String TITLE         = "Campus Game - Phase 2";
+    public static final String TITLE         = "Campus Game - Phase 3";
     public static final int    TARGET_FPS    = 60;
 
-    private JFrame  frame;
-    private boolean running = false;
-    private Thread  gameThread;
+    private JFrame   frame;
+    private boolean  running = false;
+    private Thread   gameThread;
 
     // Core subsystems
     private CampusMap        campusMap;
@@ -43,13 +32,13 @@ public class GameLoop implements Runnable {
     private Camera           camera;
     private InputHandler     inputHandler;
     private CollisionManager collisionManager;
+    private GameWorld        world;
+    private IRenderer        activeRenderer;
+    private Renderer         swingPanel;
 
-    // PHASE 2: entity scene graph
-    private GameWorld world;
-
-    // PHASE 2: renderer accessed through interface — swap for 3D later
-    private IRenderer    activeRenderer;
-    private Renderer     swingPanel;  // kept for adding to JFrame
+    // Phase 3 — editor
+    private EditorMode         editorMode;
+    private EditorInputAdapter editorInput;
 
     public void start() {
         init();
@@ -59,30 +48,52 @@ public class GameLoop implements Runnable {
     }
 
     private void init() {
-        campusMap = new CampusMap();
-        player    = new Player(300, 300);
-        camera    = new Camera(WINDOW_WIDTH, WINDOW_HEIGHT);
+        // Core
+        campusMap        = new CampusMap();
+        player           = new Player(1000, 1000);
+        camera           = new Camera(WINDOW_WIDTH, WINDOW_HEIGHT);
         inputHandler     = new InputHandler();
         collisionManager = new CollisionManager(campusMap);
-
-        // PHASE 2: create world and register player
-        world = new GameWorld();
+        world            = new GameWorld();
         world.add(player);
 
-        // PHASE 2: renderer via interface
-        // To switch to 3D: replace this line with new LwjglRenderer3D(...)
+        // Renderer
         swingPanel     = new Renderer(campusMap, player, camera);
         activeRenderer = new SwingRenderer2D(swingPanel);
         activeRenderer.init();
 
-        frame = new JFrame(TITLE + " [" + activeRenderer.getBackendName() + "]");
+        // ── Phase 3: wire editor ──────────────────────────────────
+        editorMode  = new EditorMode(campusMap, camera);
+        editorInput = new EditorInputAdapter(editorMode);
+
+        // 1. Keyboard: F1 / P / X / Ctrl+S / Ctrl+Z
+        inputHandler.setEditor(editorMode);
+
+        // 2. Drawing: editor banner + ghost + selection overlay
+        EditorOverlayRenderer overlay = new EditorOverlayRenderer(
+                editorMode.getState(), campusMap, camera);
+        swingPanel.setEditorOverlay(overlay);
+
+        // 3. Mouse: click-to-place / delete
+        swingPanel.addMouseListener(editorInput);
+        swingPanel.addMouseMotionListener(editorInput);
+        // ─────────────────────────────────────────────────────────
+
+        // Window
+        frame = new JFrame(TITLE + "  [" + activeRenderer.getBackendName() + "]");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setResizable(false);
         frame.add(swingPanel);
-        frame.addKeyListener(inputHandler);
         frame.pack();
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+
+        // Focus must be on swingPanel so keyboard events reach it
+        swingPanel.addKeyListener(inputHandler);
+        swingPanel.requestFocusInWindow();
+
+        // Snap camera to player on start
+        camera.snapTo(player);
     }
 
     @Override
@@ -96,20 +107,17 @@ public class GameLoop implements Runnable {
             lastTime    = now;
 
             update(delta);
-            activeRenderer.render(world, player, camera);  // PHASE 2: via interface
+            activeRenderer.render(world, player, camera);
 
-            long elapsed = System.nanoTime() - now;
-            long sleep   = (msPerTick - elapsed) / 1_000_000;
-            if (sleep > 0) {
-                try { Thread.sleep(sleep); } catch (InterruptedException ignored) {}
-            }
+            long sleep = (msPerTick - (System.nanoTime() - now)) / 1_000_000;
+            if (sleep > 0) try { Thread.sleep(sleep); } catch (InterruptedException ignored) {}
         }
         activeRenderer.dispose();
     }
 
     private void update(float delta) {
         inputHandler.applyToPlayer(player);
-        world.update(delta);              // PHASE 2: world updates all GameObjects
+        world.update(delta);
         collisionManager.resolve(player);
         camera.follow(player);
     }

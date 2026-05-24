@@ -4,25 +4,6 @@ import com.campusgame.core.GameObject;
 
 import java.awt.*;
 
-/**
- * PLAYER (entities/Player.java)
- * ------------------------------
- * Represents the player character on the campus map.
- *
- * PHASE 2 CHANGE:
- *   Now extends GameObject, giving it a shared identity, tag, and
- *   world position (x, y, z) compatible with the 3D coordinate system.
- *
- *   In 2D rendering: x → screen X, z → screen Y (y is ignored).
- *   In 3D rendering: x, y, z used directly.
- *
- * BACKWARD COMPATIBILITY:
- *   getCenterX() and getCenterY() still return the 2D screen coords
- *   so Renderer.java and Camera.java are UNCHANGED.
- *
- *   CollisionManager still works — getBounds() still returns a Rectangle
- *   based on x (world X) and z (world Z mapped to screen Y).
- */
 public class Player extends GameObject {
 
     // --- Movement ---

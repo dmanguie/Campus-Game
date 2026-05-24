@@ -43,11 +43,19 @@ public class CollisionManager {
      * Modifies player position and velocity to prevent building penetration.
      */
     public void resolve(Player player) {
+
         // 1. Clamp to world bounds first
         clampToWorld(player);
 
         // 2. Resolve each building
         for (Building building : campusMap.getBuildings()) {
+
+            // Ignore non-collidable objects
+            if (building.getData() != null &&
+                    !building.getData().collisionEnabled) {
+                continue;
+            }
+
             resolveBuilding(player, building);
         }
     }

@@ -1,175 +1,174 @@
 package com.campusgame.map;
 
 import com.campusgame.map.data.BuildingData;
-
 import java.awt.*;
+import java.awt.geom.AffineTransform;
 
 /**
  * BUILDING (map/Building.java)
- * -----------------------------
- * The 2D Swing renderable wrapper around a BuildingData record.
+ * 2D Swing renderable wrapper around BuildingData.
+ * Supports rectangles, rotated rectangles, and arbitrary polygons.
  *
- * PHASE 2 CHANGE:
- *   Now accepts a BuildingData in its constructor.
- *   All data (name, x, z, width, depth, floors, color) comes from BuildingData.
- *   The legacy constructor is kept for backward compatibility.
- *
- * Drawing logic is UNCHANGED — Phase 1 still works identically.
- *
- * Note on coordinates:
- *   BuildingData uses (x, z) for the 3D-ready horizontal plane.
- *   In 2D rendering, BuildingData.z maps to screen Y.
- *   This class reads b.x → screenX, b.z → screenY.
+ * BUG FIXES vs previous version:
+ *  - drawLabel() for polygon used wrong center (sx/sy instead of polygon centroid)
+ *  - getBounds() now returns polygon.getBounds() correctly for collision
+ *  - getX/Y/Width/Depth delegate to getBounds() so minimap is correct for polygons
  */
 public class Building {
 
-    // --- Source of truth: the pure data record ---
     private final BuildingData data;
-
-    // --- Derived AWT colors (2D rendering only) ---
-    private final Color roofColor;
-    private final Color wallColor;
-    private final Color labelColor;
-
-    // Convenience aliases (keep old field names working internally)
-    private final int x, y, width, depth, floors;
+    private final Color roofColor, wallColor, labelColor;
     private final String name;
 
-    // Derived 3D height (pixels per floor for future isometric rendering)
+    // For rectangular buildings only (polygon buildings use data.polygonX/Z directly)
+    private final int x, y, width, depth, floors;
+
     public static final int PIXELS_PER_FLOOR = 20;
 
-    // ---------------------------------------------------------------
-    // PHASE 2 CONSTRUCTOR — preferred
-    // ---------------------------------------------------------------
-    /**
-     * Create a renderable Building from a pure BuildingData record.
-     * BuildingData.z is used as the top-down Y position.
-     */
+    // ── Phase-3 constructor: from BuildingData ────────────────────────
     public Building(BuildingData data) {
-        this.data   = data;
-        this.name   = data.name;
-        this.x      = (int) data.x;
-        this.y      = (int) data.z;   // z = north-south = screen Y in 2D
-        this.width  = (int) data.width;
-        this.depth  = (int) data.depth;
-        this.floors = data.floors;
+        this.data      = data;
+        this.name      = data.name;
+        this.x         = (int) data.x;
+        this.y         = (int) data.z;   // z → screen Y
+        this.width     = (int) data.width;
+        this.depth     = (int) data.depth;
+        this.floors    = data.floors;
         this.roofColor  = new Color(data.red(), data.green(), data.blue());
         this.wallColor  = roofColor.darker();
         this.labelColor = Color.WHITE;
     }
 
-    // ---------------------------------------------------------------
-    // LEGACY CONSTRUCTOR — kept so old CampusMap code still compiles
-    // ---------------------------------------------------------------
+    // ── Legacy constructor ────────────────────────────────────────────
     public Building(String name, int x, int y, int width, int depth,
                     int floors, Color roofColor) {
-        this.data   = null; // no BuildingData backing in legacy mode
-        this.name   = name;
-        this.x      = x;
-        this.y      = y;
-        this.width  = width;
-        this.depth  = depth;
-        this.floors = floors;
+        this.data       = null;
+        this.name       = name;
+        this.x          = x;
+        this.y          = y;
+        this.width      = width;
+        this.depth      = depth;
+        this.floors     = floors;
         this.roofColor  = roofColor;
         this.wallColor  = roofColor.darker();
         this.labelColor = Color.WHITE;
     }
 
-    // ---------------------------------------------------------------
-    // DRAWING
-    // ---------------------------------------------------------------
-
-    /**
-     * Draws this building at its camera-adjusted screen position.
-     * Top-down 2D view with a subtle pseudo-3D shadow offset.
-     *
-     * @param g  Graphics2D context
-     * @param ox Camera offset X (subtract from world coords to get screen coords)
-     * @param oy Camera offset Y
-     */
+    // ── Draw ──────────────────────────────────────────────────────────
     public void draw(Graphics2D g, int ox, int oy) {
+        AffineTransform saved = g.getTransform();
+
+        if (data != null && data.isPolygon()) {
+            drawPolygon(g, ox, oy);
+            g.setTransform(saved);
+            return;
+        }
+
         int sx = x - ox;
         int sy = y - oy;
 
-        // ---- Shadow ----
+        if (data != null && data.rotationDegrees != 0f) {
+            float cx = sx + width / 2f;
+            float cy = sy + depth / 2f;
+            g.rotate(Math.toRadians(data.rotationDegrees), cx, cy);
+        }
+
+        // Shadow
         g.setColor(new Color(0, 0, 0, 50));
         g.fillRect(sx + 4, sy + 4, width, depth);
 
-        // ---- Roof (top face) ----
+        // Roof
         g.setColor(roofColor);
         g.fillRect(sx, sy, width, depth);
 
-        // ---- Wall accent (bottom & right edges simulate depth) ----
+        // Wall accents
         g.setColor(wallColor);
-        g.fillRect(sx, sy + depth - 4, width, 4);       // bottom edge
-        g.fillRect(sx + width - 4, sy, 4, depth);       // right edge
+        g.fillRect(sx, sy + depth - 4, width, 4);
+        g.fillRect(sx + width - 4, sy, 4, depth);
 
-        // ---- Border ----
+        // Border
         g.setColor(wallColor.darker());
         g.setStroke(new BasicStroke(1.5f));
         g.drawRect(sx, sy, width, depth);
         g.setStroke(new BasicStroke(1f));
 
-        // ---- Label ----
-        drawLabel(g, sx, sy);
+        drawLabel(g, sx, sy, width, depth);
+        g.setTransform(saved);
     }
 
-    private void drawLabel(Graphics2D g, int sx, int sy) {
+    private void drawPolygon(Graphics2D g, int ox, int oy) {
+        Polygon poly = buildScreenPolygon(ox, oy);
+
+        g.setColor(roofColor);
+        g.fillPolygon(poly);
+
+        g.setColor(wallColor.darker());
+        g.setStroke(new BasicStroke(1.5f));
+        g.drawPolygon(poly);
+        g.setStroke(new BasicStroke(1f));
+
+        // FIX: label at polygon centroid, not at (sx,sy)
+        Rectangle b = poly.getBounds();
+        drawLabel(g, b.x, b.y, b.width, b.height);
+    }
+
+    /**
+     * Shared label renderer. cx/cy are top-left of the bounding area,
+     * cw/ch are width and height — label is centred inside.
+     */
+    private void drawLabel(Graphics2D g, int bx, int by, int bw, int bh) {
         g.setFont(new Font("SansSerif", Font.BOLD, 9));
         FontMetrics fm = g.getFontMetrics();
-
-        // Wrap long names at spaces
         String[] words = name.split(" ");
-        int lineH = fm.getHeight();
+        int lineH  = fm.getHeight();
         int totalH = lineH * words.length;
-        int startY = sy + depth / 2 - totalH / 2 + fm.getAscent();
+        int startY = by + bh / 2 - totalH / 2 + fm.getAscent();
 
         for (String word : words) {
             int tw = fm.stringWidth(word);
-            int tx = sx + width / 2 - tw / 2;
-            // Drop shadow
+            int tx = bx + bw / 2 - tw / 2;
             g.setColor(new Color(0, 0, 0, 120));
             g.drawString(word, tx + 1, startY + 1);
-            // Label
             g.setColor(labelColor);
             g.drawString(word, tx, startY);
             startY += lineH;
         }
     }
 
-    // ---------------------------------------------------------------
-    // COLLISION
-    // ---------------------------------------------------------------
-
-    /**
-     * Returns the AABB collision rectangle (world space).
-     * Used by CollisionManager.
-     */
+    // ── Collision ─────────────────────────────────────────────────────
     public Rectangle getBounds() {
+        if (data != null && data.isPolygon()) {
+            return buildWorldPolygon().getBounds();
+        }
         return new Rectangle(x, y, width, depth);
     }
 
-    // ---------------------------------------------------------------
-    // GETTERS
-    // ---------------------------------------------------------------
+    // ── Helpers ───────────────────────────────────────────────────────
+    private Polygon buildWorldPolygon() {
+        Polygon p = new Polygon();
+        for (int i = 0; i < data.polygonX.length; i++)
+            p.addPoint(data.polygonX[i], data.polygonZ[i]);
+        return p;
+    }
 
-    public String getName()   { return name;   }
-    public int    getX()      { return x;      }
-    public int    getY()      { return y;      }
-    public int    getWidth()  { return width;  }
-    public int    getDepth()  { return depth;  }
-    public int    getFloors() { return floors; }
+    private Polygon buildScreenPolygon(int ox, int oy) {
+        Polygon p = new Polygon();
+        for (int i = 0; i < data.polygonX.length; i++)
+            p.addPoint(data.polygonX[i] - ox, data.polygonZ[i] - oy);
+        return p;
+    }
+
+    // ── Getters — all delegate to getBounds() so polygons are correct ─
+    public String getName()      { return name; }
+    public int    getFloors()    { return floors; }
     public Color  getRoofColor() { return roofColor; }
+    public BuildingData getData(){ return data; }
 
-    /** World-space center X */
-    public float getCenterX() { return x + width / 2f; }
+    public int getX()     { return getBounds().x; }
+    public int getY()     { return getBounds().y; }
+    public int getWidth() { return getBounds().width; }
+    public int getDepth() { return getBounds().height; }
 
-    /** World-space center Y */
-    public float getCenterY() { return y + depth / 2f; }
-
-    /**
-     * Returns the backing BuildingData (null if created via legacy constructor).
-     * Use this in Phase 2+ code to access 3D-ready fields (z, height, tag, etc.).
-     */
-    public BuildingData getData() { return data; }
+    public float getCenterX() { return getX() + getWidth()  / 2f; }
+    public float getCenterY() { return getY() + getDepth() / 2f; }
 }

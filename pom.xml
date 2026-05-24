@@ -16,18 +16,23 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
-    <!-- Phase 1 uses only standard Java (Swing/AWT) — no external deps needed -->
-    <!-- Phase 2+: Uncomment LWJGL or JavaFX below when you're ready           -->
-
-    <!--
     <dependencies>
+        <!-- Phase 3: Gson for JSON map save/load -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+        </dependency>
+
+        <!-- Phase 4 (future): Uncomment when ready for 3D -->
+        <!--
         <dependency>
             <groupId>org.lwjgl</groupId>
             <artifactId>lwjgl</artifactId>
             <version>3.3.3</version>
         </dependency>
+        -->
     </dependencies>
-    -->
 
     <build>
         <plugins>
