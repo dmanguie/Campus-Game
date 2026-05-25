@@ -164,11 +164,30 @@ public class Building {
     public Color  getRoofColor() { return roofColor; }
     public BuildingData getData(){ return data; }
 
-    public int getX()     { return getBounds().x; }
-    public int getY()     { return getBounds().y; }
-    public int getWidth() { return getBounds().width; }
-    public int getDepth() { return getBounds().height; }
+    // In Building.java — replace or supplement getX(), getY(), getWidth(), getDepth()
 
+    public int getX() {
+        if (data.isPolygon()) return min(data.polygonX);
+        return (int) data.x;
+    }
+
+    public int getY() {  // this is Z in world space
+        if (data.isPolygon()) return min(data.polygonZ);
+        return (int) data.z;
+    }
+
+    public int getWidth() {
+        if (data.isPolygon()) return max(data.polygonX) - min(data.polygonX);
+        return (int) data.width;
+    }
+
+    public int getDepth() {
+        if (data.isPolygon()) return max(data.polygonZ) - min(data.polygonZ);
+        return (int) data.depth;
+    }
+
+    private int min(int[] arr) { int m = arr[0]; for (int v : arr) if (v < m) m = v; return m; }
+    private int max(int[] arr) { int m = arr[0]; for (int v : arr) if (v > m) m = v; return m; }
     public float getCenterX() { return getX() + getWidth()  / 2f; }
     public float getCenterY() { return getY() + getDepth() / 2f; }
 }
