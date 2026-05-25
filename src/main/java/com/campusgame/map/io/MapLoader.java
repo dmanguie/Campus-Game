@@ -1,6 +1,7 @@
 package com.campusgame.map.io;
 
 import com.campusgame.map.data.BuildingData;
+import com.campusgame.map.data.EntranceData;
 import com.campusgame.map.data.PathData;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -39,17 +40,20 @@ public class MapLoader {
         for (MapJson.BuildingJson bj : mj.buildings) buildings.add(convert(bj));
 
         List<PathData> paths = new ArrayList<>();
-        if (mj.paths != null) {
+        if (mj.paths != null)
             for (MapJson.PathJson pj : mj.paths) paths.add(pj.toPathData());
-        }
+
+        List<EntranceData> entrances = new ArrayList<>();
+        if (mj.entrances != null)
+            for (MapJson.EntranceJson ej : mj.entrances) entrances.add(ej.toEntranceData());
 
         MapJson.MapMeta meta = mj.mapMeta != null
                 ? mj.mapMeta
                 : new MapJson.MapMeta("Campus", 3000, 2400, "Unknown", "");
 
-        System.out.printf("[MapLoader] Loaded %d buildings, %d paths from %s%n",
-                buildings.size(), paths.size(), src);
-        return new LoadResult(buildings, paths, meta, src);
+        System.out.printf("[MapLoader] Loaded %d buildings, %d paths, %d entrances from %s%n",
+                buildings.size(), paths.size(), entrances.size(), src);
+        return new LoadResult(buildings, paths, entrances, meta, src);
     }
 
     private BuildingData convert(MapJson.BuildingJson bj) {
@@ -75,20 +79,30 @@ public class MapLoader {
     public static class LoadResult {
         public final List<BuildingData> buildings;
         public final List<PathData>     paths;
+        public final List<EntranceData> entrances;
         public final MapJson.MapMeta    meta;
         public final String             source;
 
         public LoadResult(List<BuildingData> buildings, List<PathData> paths,
+                          List<EntranceData> entrances,
                           MapJson.MapMeta meta, String source) {
             this.buildings = buildings;
             this.paths     = paths;
+            this.entrances = entrances;
             this.meta      = meta;
             this.source    = source;
+        }
+
+        // Backward-compat constructor for fallback (no entrances)
+        public LoadResult(List<BuildingData> buildings, List<PathData> paths,
+                          MapJson.MapMeta meta, String source) {
+            this(buildings, paths, new ArrayList<>(), meta, source);
         }
 
         public static LoadResult fallback() {
             return new LoadResult(
                     new ArrayList<>(com.campusgame.map.data.MapData.BUILDINGS),
+                    new ArrayList<>(),
                     new ArrayList<>(),
                     new MapJson.MapMeta("Campus (Default)", 3000, 2400, "System", "Fallback"),
                     "fallback");

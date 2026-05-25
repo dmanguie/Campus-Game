@@ -10,15 +10,15 @@ import java.util.List;
 public class PathData {
 
     public String        name;
-    public float         strokeWidth;
-    public String        colorARGB;
+    public float         width;      // canonical stroke width
+    public String        colorHex;   // canonical colour string
     public List<float[]> points;
 
-    public PathData(String name, float strokeWidth, String colorARGB) {
-        this.name        = name;
-        this.strokeWidth = strokeWidth;
-        this.colorARGB   = colorARGB;
-        this.points      = new ArrayList<>();
+    public PathData(String name, float width, String colorHex) {
+        this.name     = name;
+        this.width    = width;
+        this.colorHex = colorHex;
+        this.points   = new ArrayList<>();
     }
 
     public void addPoint(float x, float z) { points.add(new float[]{x, z}); }

@@ -3,6 +3,7 @@ package com.campusgame.editor;
 import com.campusgame.map.Building;
 import com.campusgame.map.CampusMap;
 import com.campusgame.map.data.BuildingData;
+import com.campusgame.map.data.EntranceData;
 import com.campusgame.renderer.Camera;
 
 import java.awt.*;
@@ -25,6 +26,12 @@ public class EditorOverlayRenderer {
     private static final Color MIDPOINT_HINT   = new Color( 80,255,160,160);
     private static final Color LEGEND_BG       = new Color(  0,  0,  0,160);
 
+    private static final Color ENTRANCE_RING   = new Color( 80,220,120,220);
+    private static final Color ENTRANCE_FILL   = new Color( 80,220,120, 55);
+    private static final Color ENTRANCE_SEL    = new Color(255,220, 50,240);
+    private static final Color ENTRANCE_GHOST  = new Color(120,220,160,120);
+    private static final Color ENTRANCE_LABEL  = new Color( 60,200,100,220);
+
     public EditorOverlayRenderer(EditorState state, CampusMap campusMap, Camera camera) {
         this.state = state; this.campusMap = campusMap; this.camera = camera;
     }
@@ -34,11 +41,15 @@ public class EditorOverlayRenderer {
         drawBanner(g, screenW);
         drawGhost(g);
         drawSelection(g);
+        drawEntrances(g);
         drawShapeEdit(g, screenW);
         drawPathEdit(g, screenW);
+        drawEntranceLegend(g, screenW);
+        drawScenePicker(g);
         drawStatus(g, screenW, screenH);
     }
 
+    // ── Banner ────────────────────────────────────────────────────────
     private void drawBanner(Graphics2D g, int screenW) {
         g.setColor(BANNER_BG); g.fillRect(0,0,screenW,28);
         g.setFont(new Font("Consolas",Font.BOLD,13));
@@ -50,6 +61,7 @@ public class EditorOverlayRenderer {
             case DELETE     -> "[ X ] DELETE";
             case SHAPE_EDIT -> "[ V ] SHAPE EDIT";
             case PATH_EDIT  -> "[ R ] PATH EDIT";
+            case ENTRANCE   -> "[ N ] ENTRANCE";
         };
         g.setColor(Color.WHITE);
         FontMetrics fm = g.getFontMetrics();
@@ -57,10 +69,11 @@ public class EditorOverlayRenderer {
 
         g.setColor(new Color(180,180,180));
         g.setFont(new Font("SansSerif",Font.PLAIN,11));
-        String hint = "F1=Exit  P=Place  S=Select  X=Delete  V=ShapeEdit  R=PathEdit  Ctrl+S=Save  Ctrl+Z=Undo";
+        String hint = "F1=Exit  P=Place  S=Select  X=Delete  V=Shape  R=Path  N=Entrance  Ctrl+S=Save";
         g.drawString(hint, screenW - g.getFontMetrics().stringWidth(hint) - 10, 19);
     }
 
+    // ── Ghost building ────────────────────────────────────────────────
     private void drawGhost(Graphics2D g) {
         BuildingData ghost = state.getGhostBuilding();
         if (ghost==null || state.getCurrentTool()!=EditorState.Tool.PLACE) return;
@@ -68,12 +81,14 @@ public class EditorOverlayRenderer {
         int sw=(int)ghost.width, sh=(int)ghost.depth;
         g.setColor(GHOST_FILL); g.fillRect(sx,sy,sw,sh);
         g.setColor(GHOST_BORDER);
-        g.setStroke(new BasicStroke(1.5f,BasicStroke.CAP_ROUND,BasicStroke.JOIN_ROUND,1f,new float[]{6f,4f},0f));
+        g.setStroke(new BasicStroke(1.5f,BasicStroke.CAP_ROUND,BasicStroke.JOIN_ROUND,
+                1f,new float[]{6f,4f},0f));
         g.drawRect(sx,sy,sw,sh); g.setStroke(new BasicStroke(1f));
         g.setColor(Color.WHITE); g.setFont(new Font("SansSerif",Font.BOLD,9));
         g.drawString(ghost.name, sx+4, sy+12);
     }
 
+    // ── Building selection ────────────────────────────────────────────
     private void drawSelection(Graphics2D g) {
         if (state.getCurrentTool()==EditorState.Tool.SHAPE_EDIT) return;
         BuildingData sel = state.getSelectedBuilding();
@@ -83,14 +98,23 @@ public class EditorOverlayRenderer {
             g.setColor(SELECT_COLOR); g.setStroke(new BasicStroke(3f));
             if (sel.isPolygon()) {
                 int n=sel.polygonX.length; int[] px=new int[n],py=new int[n];
-                for (int i=0;i<n;i++){px[i]=camera.worldToScreenX(sel.polygonX[i]);py[i]=camera.worldToScreenY(sel.polygonZ[i]);}
+                for (int i=0;i<n;i++){
+                    px[i]=camera.worldToScreenX(sel.polygonX[i]);
+                    py[i]=camera.worldToScreenY(sel.polygonZ[i]);
+                }
                 g.drawPolygon(px,py,n);
             } else {
-                g.drawRect(camera.worldToScreenX(b.getX())-2, camera.worldToScreenY(b.getY())-2, b.getWidth()+4, b.getDepth()+4);
+                g.drawRect(camera.worldToScreenX(b.getX())-2,
+                        camera.worldToScreenY(b.getY())-2,
+                        b.getWidth()+4, b.getDepth()+4);
             }
             g.setStroke(new BasicStroke(1f));
-            int tx = sel.isPolygon() ? camera.worldToScreenX(sel.polygonX[0]) : camera.worldToScreenX(b.getX());
-            int ty = sel.isPolygon() ? camera.worldToScreenY(sel.polygonZ[0]) : camera.worldToScreenY(b.getY());
+            int tx = sel.isPolygon()
+                    ? camera.worldToScreenX(sel.polygonX[0])
+                    : camera.worldToScreenX(b.getX());
+            int ty = sel.isPolygon()
+                    ? camera.worldToScreenY(sel.polygonZ[0])
+                    : camera.worldToScreenY(b.getY());
             g.setFont(new Font("SansSerif",Font.BOLD,10));
             int tw = g.getFontMetrics().stringWidth(sel.name);
             g.setColor(new Color(0,0,0,160)); g.fillRoundRect(tx,ty-18,tw+8,16,4,4);
@@ -99,17 +123,124 @@ public class EditorOverlayRenderer {
         }
     }
 
+    // ── Entrance markers ──────────────────────────────────────────────
+    private void drawEntrances(Graphics2D g) {
+        EditorState.EntranceEditState ee = state.getEntranceEdit();
+        if (state.getCurrentTool() == EditorState.Tool.ENTRANCE && ee.ghost != null) {
+            drawEntranceMarker(g, ee.ghost, ENTRANCE_GHOST, false);
+        }
+        for (EntranceData e : campusMap.getEntrances()) {
+            boolean selected = (e == ee.selected);
+            drawEntranceMarker(g, e, selected ? ENTRANCE_SEL : ENTRANCE_RING, selected);
+        }
+    }
+
+    private void drawEntranceMarker(Graphics2D g, EntranceData e, Color ring, boolean selected) {
+        int sx = camera.worldToScreenX(e.worldX);
+        int sz = camera.worldToScreenY(e.worldZ);
+        int r  = Math.max(8, (int)(e.triggerRadius * 0.5f));
+
+        g.setColor(selected ? new Color(255,220,50,40) : ENTRANCE_FILL);
+        g.fillOval(sx - r, sz - r, r*2, r*2);
+
+        g.setColor(ring);
+        g.setStroke(new BasicStroke(selected ? 2.5f : 1.8f));
+        g.drawOval(sx - r, sz - r, r*2, r*2);
+        g.setStroke(new BasicStroke(1f));
+
+        g.setColor(ring);
+        g.fillRect(sx - 7, sz - 10, 14, 18);
+        g.setColor(selected ? Color.BLACK : new Color(0,0,0,120));
+        g.drawRect(sx - 7, sz - 10, 14, 18);
+
+        g.setColor(selected ? Color.BLACK : new Color(0,0,0,160));
+        g.fillOval(sx + 2, sz - 2, 4, 4);
+
+        if (e.id != null) {
+            g.setFont(new Font("Consolas", Font.BOLD, 9));
+            String top = e.id;
+            String bot = e.interiorSceneId != null && !e.interiorSceneId.isEmpty()
+                    ? "→ " + e.interiorSceneId : "→ (no scene — press C)";
+            int lw = Math.max(g.getFontMetrics().stringWidth(top),
+                    g.getFontMetrics().stringWidth(bot));
+            int lx = sx - lw / 2 - 3;
+            int ly = sz + r + 4;
+            g.setColor(new Color(0,0,0,150));
+            g.fillRoundRect(lx, ly, lw + 6, 26, 4, 4);
+            g.setColor(selected ? ENTRANCE_SEL : ENTRANCE_LABEL);
+            g.drawString(top, lx + 3, ly + 10);
+            g.setColor(new Color(160,220,160,200));
+            g.drawString(bot, lx + 3, ly + 21);
+        }
+    }
+
+    // ── Scene picker ──────────────────────────────────────────────────
+    private void drawScenePicker(Graphics2D g) {
+        EditorState.EntranceEditState ee = state.getEntranceEdit();
+        if (!ee.pickerOpen || ee.sceneIds.isEmpty()) return;
+
+        int px = 20, py = 60;
+        int rowH = 22, boxW = 260;
+        int boxH = ee.sceneIds.size() * rowH + 28;
+
+        g.setColor(new Color(10, 10, 20, 220));
+        g.fillRoundRect(px - 4, py - 24, boxW + 8, boxH, 8, 8);
+        g.setColor(new Color(255, 220, 50, 180));
+        g.setStroke(new BasicStroke(1.5f));
+        g.drawRoundRect(px - 4, py - 24, boxW + 8, boxH, 8, 8);
+        g.setStroke(new BasicStroke(1f));
+
+        g.setFont(new Font("Consolas", Font.BOLD, 12));
+        g.setColor(new Color(255, 220, 50));
+        g.drawString("Assign scene to: " + ee.selected.id, px, py - 8);
+
+        g.setFont(new Font("Consolas", Font.PLAIN, 12));
+        for (int i = 0; i < ee.sceneIds.size(); i++) {
+            int ry = py + i * rowH;
+            boolean hovered = (i == ee.pickerHover);
+            g.setColor(hovered ? new Color(80,180,100,200) : new Color(30,30,50,180));
+            g.fillRect(px, ry, boxW, rowH - 2);
+            g.setColor(hovered ? Color.BLACK : new Color(140,220,160));
+            g.drawString(ee.sceneIds.get(i), px + 8, ry + 15);
+            if (ee.sceneIds.get(i).equals(ee.selected.interiorSceneId)) {
+                g.setColor(hovered ? Color.BLACK : new Color(80,220,120));
+                g.drawString("✓", px + boxW - 20, ry + 15);
+            }
+        }
+
+        g.setFont(new Font("Consolas", Font.PLAIN, 10));
+        g.setColor(new Color(150, 150, 150));
+        g.drawString("Click to assign  •  Esc to cancel",
+                px, py + ee.sceneIds.size() * rowH + 14);
+    }
+
+    // ── Entrance legend ───────────────────────────────────────────────
+    private void drawEntranceLegend(Graphics2D g, int screenW) {
+        if (state.getCurrentTool() != EditorState.Tool.ENTRANCE) return;
+        drawLegend(g, screenW, new String[]{
+                "ENTRANCE TOOL",
+                "Click empty = place door",
+                "Click marker = select",
+                "C = assign scene",
+                "Drag = move door",
+                "Del = delete selected",
+                "Esc = deselect"
+        });
+    }
+
+    // ── Shape edit ────────────────────────────────────────────────────
     private void drawShapeEdit(Graphics2D g, int screenW) {
         if (state.getCurrentTool()!=EditorState.Tool.SHAPE_EDIT) return;
         ShapeEditState se = state.getShapeEdit();
         if (!se.isActive()) return;
-        int[] vx=se.getVerticesX(), vz=se.getVerticesZ(), n_=new int[]{vx.length};
-        int n=n_[0]; int[] sx=new int[n],sy=new int[n];
+        int[] vx=se.getVerticesX(), vz=se.getVerticesZ();
+        int n=vx.length; int[] sx=new int[n],sy=new int[n];
         for (int i=0;i<n;i++){sx[i]=camera.worldToScreenX(vx[i]);sy[i]=camera.worldToScreenY(vz[i]);}
 
         g.setColor(new Color(80,200,255,30)); g.fillPolygon(sx,sy,n);
         g.setColor(SHAPE_OUTLINE);
-        g.setStroke(new BasicStroke(1.8f,BasicStroke.CAP_ROUND,BasicStroke.JOIN_ROUND,1f,new float[]{6f,3f},0f));
+        g.setStroke(new BasicStroke(1.8f,BasicStroke.CAP_ROUND,BasicStroke.JOIN_ROUND,
+                1f,new float[]{6f,3f},0f));
         g.drawPolygon(sx,sy,n); g.setStroke(new BasicStroke(1f));
 
         g.setColor(MIDPOINT_HINT);
@@ -118,17 +249,22 @@ public class EditorOverlayRenderer {
         int hovered=se.getHoveredVertex(), selected=se.getSelectedVertex();
         for (int i=0;i<n;i++) {
             Color fill; int r;
-            if (i==selected){fill=VERTEX_SELECTED;r=7;}
+            if(i==selected){fill=VERTEX_SELECTED;r=7;}
             else if(i==hovered){fill=VERTEX_HOVERED;r=7;}
             else{fill=VERTEX_NORMAL;r=5;}
             g.setColor(fill); g.fillOval(sx[i]-r,sy[i]-r,r*2,r*2);
             g.setColor(Color.BLACK); g.drawOval(sx[i]-r,sy[i]-r,r*2,r*2);
-            g.setColor(new Color(255,255,255,160)); g.setFont(new Font("Consolas",Font.BOLD,9));
+            g.setColor(new Color(255,255,255,160));
+            g.setFont(new Font("Consolas",Font.BOLD,9));
             g.drawString(String.valueOf(i),sx[i]+r+2,sy[i]-r+8);
         }
-        drawLegend(g, screenW, new String[]{"SHAPE PRESETS","1=Square","2=Rectangle","3=Circle 8pt","4=Circle 16pt","5=New Polygon","","L-drag=move vert","Mid=add vert","R-click=del vert","","Enter=commit","Esc=cancel"});
+        drawLegend(g, screenW, new String[]{"SHAPE PRESETS","1=Square","2=Rectangle",
+                "3=Circle 8pt","4=Circle 16pt","5=New Polygon","",
+                "L-drag=move vert","Mid=add vert","R-click=del vert","",
+                "Enter=commit","Esc=cancel"});
     }
 
+    // ── Path edit ─────────────────────────────────────────────────────
     private void drawPathEdit(Graphics2D g, int screenW) {
         if (state.getCurrentTool()!=EditorState.Tool.PATH_EDIT) return;
         PathEditState pe = state.getPathEdit();
@@ -153,12 +289,15 @@ public class EditorOverlayRenderer {
             else{fill=new Color(220,180,80,220);r=5;}
             g.setColor(fill); g.fillOval(sx[i]-r,sy[i]-r,r*2,r*2);
             g.setColor(Color.BLACK); g.drawOval(sx[i]-r,sy[i]-r,r*2,r*2);
-            g.setColor(new Color(255,255,255,160)); g.setFont(new Font("Consolas",Font.BOLD,9));
+            g.setColor(new Color(255,255,255,160));
+            g.setFont(new Font("Consolas",Font.BOLD,9));
             g.drawString(String.valueOf(i),sx[i]+r+2,sy[i]-r+8);
         }
-        drawLegend(g, screenW, new String[]{"PATH EDIT","Click=add point","L-drag=move point","Mid=insert point","R-click=del point","","Enter=finish","Esc=cancel"});
+        drawLegend(g, screenW, new String[]{"PATH EDIT","Click=add point","L-drag=move point",
+                "Mid=insert point","R-click=del point","","Enter=finish","Esc=cancel"});
     }
 
+    // ── Shared helpers ────────────────────────────────────────────────
     private void drawLegend(Graphics2D g, int screenW, String[] lines) {
         g.setFont(new Font("Consolas",Font.PLAIN,11));
         FontMetrics fm=g.getFontMetrics();
@@ -167,11 +306,20 @@ public class EditorOverlayRenderer {
         g.setColor(LEGEND_BG); g.fillRoundRect(boxX,boxY,boxW,boxH,6,6);
         int ty=boxY+lineH;
         for (String line : lines) {
-            boolean isHeader = line.equals("SHAPE PRESETS") || line.equals("PATH EDIT");
-            if (isHeader){g.setColor(new Color(255,230,80));g.setFont(new Font("Consolas",Font.BOLD,11));}
-            else if(line.isEmpty()){ty+=4;g.setFont(new Font("Consolas",Font.PLAIN,11));g.setColor(new Color(140,220,255));}
-            else{g.setFont(new Font("Consolas",Font.PLAIN,11));g.setColor(new Color(140,220,255));}
-            g.drawString(line,boxX+8,ty); ty+=lineH;
+            boolean isHeader = line.equals("SHAPE PRESETS")
+                    || line.equals("PATH EDIT")
+                    || line.equals("ENTRANCE TOOL");
+            if (isHeader) {
+                g.setColor(new Color(255,230,80));
+                g.setFont(new Font("Consolas",Font.BOLD,11));
+            } else if (line.isEmpty()) {
+                ty+=4; g.setFont(new Font("Consolas",Font.PLAIN,11));
+                g.setColor(new Color(140,220,255));
+            } else {
+                g.setFont(new Font("Consolas",Font.PLAIN,11));
+                g.setColor(new Color(140,220,255));
+            }
+            g.drawString(line, boxX+8, ty); ty+=lineH;
         }
     }
 

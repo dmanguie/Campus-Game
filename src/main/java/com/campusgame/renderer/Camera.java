@@ -5,22 +5,13 @@ import com.campusgame.map.CampusMap;
 
 /**
  * CAMERA (renderer/Camera.java)
- * ------------------------------
- * Converts world coordinates to screen coordinates.
  *
- * Responsibilities:
- *  - Follows the player by centering on them
- *  - Clamps so the camera never shows outside the world
- *  - Provides offsetX / offsetY that all renderers subtract
- *    from world positions to get screen positions
+ * Phase 5 additions:
+ *   • worldWidth / worldHeight fields (mutable)
+ *   • setWorldBounds(w, h)  — called by InteriorManager to re-clamp
+ *     camera when entering/leaving an interior scene
  *
- * Usage:
- *   int screenX = (int)(worldX - camera.getOffsetX());
- *   int screenY = (int)(worldY - camera.getOffsetY());
- *
- * Future expansion:
- *  - Zoom level
- *  - Shake effect
+ * Everything else UNCHANGED from Phase 4.
  */
 public class Camera {
 
@@ -32,14 +23,20 @@ public class Camera {
     // Lerp smoothing factor (0 = no movement, 1 = instant snap)
     private static final float LERP = 0.12f;
 
+    // ── Phase 5: mutable world bounds ────────────────────────────────
+    // Default = exterior campus size.
+    // InteriorManager calls setWorldBounds() when entering/leaving a building.
+    private float worldWidth  = CampusMap.WORLD_WIDTH;
+    private float worldHeight = CampusMap.WORLD_HEIGHT;
+
     public Camera(int screenWidth, int screenHeight) {
         this.screenWidth  = screenWidth;
         this.screenHeight = screenHeight;
     }
 
-    // ---------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────
     // FOLLOW
-    // ---------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────
 
     /**
      * Smoothly moves camera toward the player center.
@@ -55,73 +52,77 @@ public class Camera {
         clamp();
     }
 
-    /** Snap camera instantly to player (no lerp). Useful on spawn/teleport. */
+    /** Snap camera instantly to player (no lerp). Used on spawn / teleport. */
     public void snapTo(Player player) {
         offsetX = player.getCenterX() - screenWidth  / 2f;
         offsetY = player.getCenterY() - screenHeight / 2f;
         clamp();
     }
 
-    // ---------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────
     // COORDINATE HELPERS
-    // ---------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────
 
-    /** Convert world X to screen X. */
-    public int worldToScreenX(float worldX) {
-        return (int)(worldX - offsetX);
-    }
+    public int   worldToScreenX(float worldX) { return (int)(worldX - offsetX); }
+    public int   worldToScreenY(float worldY) { return (int)(worldY - offsetY); }
+    public float screenToWorldX(int screenX)  { return screenX + offsetX; }
+    public float screenToWorldY(int screenY)  { return screenY + offsetY; }
 
-    /** Convert world Z/Y to screen Y. */
-    public int worldToScreenY(float worldY) {
-        return (int)(worldY - offsetY);
-    }
+    // ─────────────────────────────────────────────────────────────────
+    // OFFSET  (EditorCamera pan / middle-mouse drag)
+    // ─────────────────────────────────────────────────────────────────
 
-    /** Convert screen X to world X. */
-    public float screenToWorldX(int screenX) {
-        return screenX + offsetX;
-    }
-
-    /** Convert screen Y to world Z/Y. */
-    public float screenToWorldY(int screenY) {
-        return screenY + offsetY;
-    }
-
-    // ---------------------------------------------------------------
-    // OFFSET  (used by EditorCamera for pan / middle-mouse drag)
-    // ---------------------------------------------------------------
-
-    /**
-     * Directly set the viewport offset.
-     * EditorCamera calls this for keyboard pan and middle-mouse drag.
-     * Automatically clamped to world bounds.
-     */
     public void setOffset(float ox, float oy) {
         offsetX = ox;
         offsetY = oy;
         clamp();
     }
 
-    // ---------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────
+    // PHASE 5 — WORLD BOUNDS
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Re-clamp camera to a different world size.
+     *
+     * Called by InteriorManager:
+     *   • enterScene()    → setWorldBounds(scene.width, scene.height)
+     *   • exitToExterior()→ setWorldBounds(WORLD_WIDTH, WORLD_HEIGHT)
+     *
+     * When the interior is smaller than the screen the camera stays
+     * at (0, 0) so the interior draws from the top-left corner with the
+     * background colour filling any remaining space.
+     */
+    public void setWorldBounds(float w, float h) {
+        worldWidth  = w;
+        worldHeight = h;
+        clamp();
+    }
+
+    // ─────────────────────────────────────────────────────────────────
     // GETTERS
-    // ---------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────
 
-    /** Integer offset — used by legacy renderers that subtract directly. */
-    public int getOffsetX() { return (int) offsetX; }
-    public int getOffsetY() { return (int) offsetY; }
+    public int   getOffsetX()      { return (int) offsetX; }
+    public int   getOffsetY()      { return (int) offsetY; }
+    public float getOffsetXf()     { return offsetX; }
+    public float getOffsetYf()     { return offsetY; }
+    public int   getScreenWidth()  { return screenWidth;  }
+    public int   getScreenHeight() { return screenHeight; }
 
-    /** Float offset — used by EditorCamera for smooth pan math. */
-    public float getOffsetXf() { return offsetX; }
-    public float getOffsetYf() { return offsetY; }
-
-    public int getScreenWidth()  { return screenWidth;  }
-    public int getScreenHeight() { return screenHeight; }
-
-    // ---------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────
     // INTERNAL
-    // ---------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────
 
+    /**
+     * Clamp to [0 .. worldSize - screenSize].
+     * When worldSize < screenSize the max is negative, so Math.max(0,…)
+     * keeps offset at 0 — the scene draws from the top-left.
+     */
     private void clamp() {
-        offsetX = Math.max(0, Math.min(offsetX, CampusMap.WORLD_WIDTH  - screenWidth));
-        offsetY = Math.max(0, Math.min(offsetY, CampusMap.WORLD_HEIGHT - screenHeight));
+        float maxX = Math.max(0f, worldWidth  - screenWidth);
+        float maxY = Math.max(0f, worldHeight - screenHeight);
+        offsetX = Math.max(0f, Math.min(offsetX, maxX));
+        offsetY = Math.max(0f, Math.min(offsetY, maxY));
     }
 }

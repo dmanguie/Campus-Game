@@ -1,6 +1,7 @@
 package com.campusgame.map.io;
 
 import com.campusgame.map.data.BuildingData;
+import com.campusgame.map.data.EntranceData;
 import com.campusgame.map.data.PathData;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -22,18 +23,28 @@ public class MapSaver {
         this.gson = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
     }
 
-    public boolean save(List<BuildingData> buildings, List<PathData> paths, MapJson.MapMeta meta) {
+    public boolean save(List<BuildingData> buildings,
+                        List<PathData>     paths,
+                        List<EntranceData> entrances,
+                        MapJson.MapMeta    meta) {
         try {
             meta.lastModified = Instant.now().toString();
             MapJson mj   = new MapJson();
             mj.mapMeta   = meta;
             mj.paths     = new ArrayList<>();
             mj.buildings = new ArrayList<>();
+            mj.entrances = new ArrayList<>();
 
             if (paths != null)
-                for (PathData pd : paths) mj.paths.add(MapJson.PathJson.from(pd));
+                for (PathData pd : paths)
+                    mj.paths.add(MapJson.PathJson.from(pd));
 
-            for (BuildingData b : buildings) mj.buildings.add(toJson(b));
+            for (BuildingData b : buildings)
+                mj.buildings.add(toJson(b));
+
+            if (entrances != null)
+                for (EntranceData e : entrances)
+                    mj.entrances.add(MapJson.EntranceJson.from(e));
 
             File saveFile = new File(savePath);
             saveFile.getParentFile().mkdirs();
@@ -41,10 +52,11 @@ public class MapSaver {
 
             File tmp = new File(savePath + ".tmp");
             try (Writer w = new FileWriter(tmp)) { gson.toJson(mj, w); }
-            Files.move(tmp.toPath(), saveFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            Files.move(tmp.toPath(), saveFile.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING);
 
-            System.out.printf("[MapSaver] Saved %d buildings, %d paths → %s%n",
-                    buildings.size(), mj.paths.size(), savePath);
+            System.out.printf("[MapSaver] Saved %d buildings, %d paths, %d entrances → %s%n",
+                    buildings.size(), mj.paths.size(), mj.entrances.size(), savePath);
             return true;
         } catch (Exception e) {
             System.err.println("[MapSaver] FAILED: " + e.getMessage());
@@ -52,8 +64,15 @@ public class MapSaver {
         }
     }
 
+    // Backward-compat overload used by old callers that don't pass entrances
+    public boolean save(List<BuildingData> buildings,
+                        List<PathData>     paths,
+                        MapJson.MapMeta    meta) {
+        return save(buildings, paths, new ArrayList<>(), meta);
+    }
+
     public boolean save(List<BuildingData> buildings) {
-        return save(buildings, new ArrayList<>(),
+        return save(buildings, new ArrayList<>(), new ArrayList<>(),
                 new MapJson.MapMeta("Main Campus", 3000, 2400, "Admin", "Saved by editor"));
     }
 

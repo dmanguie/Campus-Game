@@ -1,7 +1,7 @@
 package com.campusgame.map;
 
 import com.campusgame.map.data.BuildingData;
-import com.campusgame.map.data.MapData;
+import com.campusgame.map.data.EntranceData;
 import com.campusgame.map.data.PathData;
 import com.campusgame.map.io.MapLoader;
 
@@ -10,137 +10,234 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * CAMPUS MAP (map/CampusMap.java)
+ *
+ * Central data store for the exterior campus world.
+ *
+ * Holds:
+ *   buildings  — all placed Building objects (wrapping BuildingData)
+ *   paths      — walkway / road splines
+ *   entrances  — Phase 5 door trigger data (links world pos → interior scene)
+ *
+ * Phase 5 additions (marked ── Phase 5):
+ *   • entrances list + add/remove/get API
+ */
 public class CampusMap {
 
-    public static final int WORLD_WIDTH  = MapData.WORLD_WIDTH;
-    public static final int WORLD_HEIGHT = MapData.WORLD_HEIGHT;
+    // ── World dimensions ──────────────────────────────────────────────
+    public static final int WORLD_WIDTH  = 3000;
+    public static final int WORLD_HEIGHT = 2400;
 
-    private final List<Building>     buildings        = new ArrayList<>();
-    private final List<BuildingData> mutableBuildings = new ArrayList<>();
-    private final List<PathData>     paths            = new ArrayList<>();
+    // ── Data ──────────────────────────────────────────────────────────
+    private final List<Building>     buildings = new ArrayList<>();
+    private final List<PathData>     paths     = new ArrayList<>();
+    private final List<EntranceData> entrances = new ArrayList<>();   // Phase 5
 
-    public static final Color COLOR_GRASS  = new Color(107, 161,  83);
-    public static final Color COLOR_PATH   = new Color(220, 215, 200);
-    public static final Color COLOR_BORDER = new Color( 60,  80,  40);
+    private MapLoader.LoadResult lastLoadResult = null;
 
-    private MapLoader.LoadResult lastLoadResult;
+    // ── Ground tile colours ───────────────────────────────────────────
+    private static final Color GRASS_A = new Color(88,  144, 68);
+    private static final Color GRASS_B = new Color(96,  154, 76);
+    private static final int   TILE    = 120;
+
+    // ── Constructor ───────────────────────────────────────────────────
 
     public CampusMap() {
         MapLoader loader = new MapLoader();
         lastLoadResult   = loader.load();
 
-        mutableBuildings.addAll(lastLoadResult.buildings);
-        rebuildBuildings();
+        if (lastLoadResult != null && lastLoadResult.buildings != null) {
+            for (BuildingData bd : lastLoadResult.buildings)
+                buildings.add(new Building(bd));
 
-        if (lastLoadResult.paths != null && !lastLoadResult.paths.isEmpty()) {
-            paths.addAll(lastLoadResult.paths);
+            if (lastLoadResult.paths != null)
+                paths.addAll(lastLoadResult.paths);
         } else {
-            seedDefaultPaths();
+            buildDefaults();
         }
     }
 
-    // ── Building editor API ───────────────────────────────────────────
-    public List<BuildingData> getMutableBuildings() { return mutableBuildings; }
+    /** Fallback buildings when no campus.json exists yet. */
+    private void buildDefaults() {
+        addBuilding(new BuildingData("Main Hall",    400,  300, 280, 200, 4, 0xFF8899AA, 0, true, "academic"));
+        addBuilding(new BuildingData("Library",      820,  260, 220, 180, 3, 0xFF99AA88, 0, true, "academic"));
+        addBuilding(new BuildingData("Gymnasium",    410,  710, 300, 250, 2, 0xFF778899, 0, true, "gym"));
+        addBuilding(new BuildingData("Science Bldg", 1120, 400, 240, 190, 5, 0xFF8899CC, 0, true, "academic"));
+        addBuilding(new BuildingData("Cafeteria",    820,  700, 260, 200, 2, 0xFFAA9977, 0, true, "resource"));
+        addBuilding(new BuildingData("Admin",        150,  560, 200, 160, 3, 0xFF99AABB, 0, true, "academic"));
+    }
 
-    public void addBuilding(BuildingData data) {
-        mutableBuildings.add(data); rebuildBuildings();
+    // ─────────────────────────────────────────────────────────────────
+    // GROUND + PATH RENDERING
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Draws the ground layer: tiled grass + subtle grid + campus paths.
+     * Called by Renderer as Layer 1 (exterior only).
+     */
+    public void drawGround(Graphics2D g, int ox, int oy, int screenW, int screenH) {
+        drawGrassTiles(g, ox, oy, screenW, screenH);
+        drawPaths(g, ox, oy);
     }
-    public void removeBuilding(BuildingData data) {
-        mutableBuildings.remove(data); rebuildBuildings();
+
+    private void drawGrassTiles(Graphics2D g, int ox, int oy, int screenW, int screenH) {
+        int startX = (ox / TILE) * TILE;
+        int startY = (oy / TILE) * TILE;
+
+        for (int wx = startX; wx < ox + screenW + TILE; wx += TILE) {
+            for (int wy = startY; wy < oy + screenH + TILE; wy += TILE) {
+                boolean alt = ((wx / TILE) + (wy / TILE)) % 2 == 0;
+                g.setColor(alt ? GRASS_A : GRASS_B);
+                g.fillRect(wx - ox, wy - oy, TILE, TILE);
+            }
+        }
+
+        // Subtle grid lines
+        g.setColor(new Color(0, 0, 0, 14));
+        g.setStroke(new BasicStroke(0.5f));
+        int startX2 = (ox / TILE) * TILE;
+        int startY2 = (oy / TILE) * TILE;
+        for (int wx = startX2; wx < ox + screenW + TILE; wx += TILE)
+            g.drawLine(wx - ox, 0, wx - ox, screenH);
+        for (int wy = startY2; wy < oy + screenH + TILE; wy += TILE)
+            g.drawLine(0, wy - oy, screenW, wy - oy);
+        g.setStroke(new BasicStroke(1f));
     }
+
+    private void drawPaths(Graphics2D g, int ox, int oy) {
+        for (PathData p : paths) {
+            if (p.points == null || p.points.size() < 2) continue;
+            if (!p.isValid()) continue;
+
+            Color base = parseHexColor(p.colorHex);
+            float stroke = Math.max(8f, p.width); // never thinner than 8px in world view
+
+            // ── Shadow pass — dark outline makes the path pop off the grass ──
+            g.setColor(new Color(0, 0, 0, 60));
+            g.setStroke(new BasicStroke(stroke + 6f,
+                    BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            for (int i = 0; i < p.points.size() - 1; i++) {
+                int x1 = (int) p.points.get(i  )[0] - ox;
+                int y1 = (int) p.points.get(i  )[1] - oy;
+                int x2 = (int) p.points.get(i+1)[0] - ox;
+                int y2 = (int) p.points.get(i+1)[1] - oy;
+                g.drawLine(x1, y1, x2, y2);
+            }
+
+            // ── Main path fill ────────────────────────────────────────────
+            g.setColor(base);
+            g.setStroke(new BasicStroke(stroke,
+                    BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            for (int i = 0; i < p.points.size() - 1; i++) {
+                int x1 = (int) p.points.get(i  )[0] - ox;
+                int y1 = (int) p.points.get(i  )[1] - oy;
+                int x2 = (int) p.points.get(i+1)[0] - ox;
+                int y2 = (int) p.points.get(i+1)[1] - oy;
+                g.drawLine(x1, y1, x2, y2);
+            }
+
+            // ── Centre line — subtle darker stripe for realism ────────────
+            g.setColor(new Color(0, 0, 0, 25));
+            g.setStroke(new BasicStroke(Math.max(1f, stroke * 0.15f),
+                    BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            for (int i = 0; i < p.points.size() - 1; i++) {
+                int x1 = (int) p.points.get(i  )[0] - ox;
+                int y1 = (int) p.points.get(i  )[1] - oy;
+                int x2 = (int) p.points.get(i+1)[0] - ox;
+                int y2 = (int) p.points.get(i+1)[1] - oy;
+                g.drawLine(x1, y1, x2, y2);
+            }
+
+            g.setStroke(new BasicStroke(6f));
+        }
+    }
+    /**
+     * Parses "#FFDCD7C8" (ARGB) or "FFDCD7C8" into a Color.
+     * Falls back to sandy cream if parsing fails.
+     */
+    private static Color parseHexColor(String hex) {
+        if (hex == null || hex.isEmpty()) return new Color(220, 215, 200);
+        try {
+            String clean = hex.startsWith("#") ? hex.substring(1) : hex;
+            long v = Long.parseLong(clean, 16);
+            if (clean.length() == 8) {
+                int a = (int)((v >> 24) & 0xFF);
+                int r = (int)((v >> 16) & 0xFF);
+                int gr= (int)((v >>  8) & 0xFF);
+                int b = (int)( v        & 0xFF);
+                return new Color(r, gr, b, a);
+            } else {
+                int r = (int)((v >> 16) & 0xFF);
+                int gr= (int)((v >>  8) & 0xFF);
+                int b = (int)( v        & 0xFF);
+                return new Color(r, gr, b);
+            }
+        } catch (NumberFormatException e) {
+            return new Color(220, 215, 200);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // BUILDING MANAGEMENT
+    // ─────────────────────────────────────────────────────────────────
+
+    /** Unmodifiable view — used by Renderer and minimap. */
+    public List<Building> getBuildings() {
+        return Collections.unmodifiableList(buildings);
+    }
+
+    /** Live mutable BuildingData list — used by EditorMode and MapSaver. */
+    public List<BuildingData> getMutableBuildings() {
+        List<BuildingData> out = new ArrayList<>();
+        for (Building b : buildings) out.add(b.getData());
+        return out;
+    }
+
+    public void addBuilding(BuildingData bd) {
+        buildings.add(new Building(bd));
+    }
+
+    public void removeBuilding(BuildingData bd) {
+        buildings.removeIf(b -> b.getData() == bd);
+    }
+
     public void replaceBuilding(BuildingData old, BuildingData next) {
-        int i = mutableBuildings.indexOf(old);
-        if (i >= 0) { mutableBuildings.set(i, next); rebuildBuildings(); }
-    }
-    public void replaceAllBuildings(List<BuildingData> newList) {
-        mutableBuildings.clear(); mutableBuildings.addAll(newList); rebuildBuildings();
+        for (int i = 0; i < buildings.size(); i++) {
+            if (buildings.get(i).getData() == old) {
+                buildings.set(i, new Building(next));
+                return;
+            }
+        }
     }
 
-    private void rebuildBuildings() {
+    public void replaceAllBuildings(List<BuildingData> list) {
         buildings.clear();
-        for (BuildingData bd : mutableBuildings) buildings.add(new Building(bd));
+        for (BuildingData bd : list) buildings.add(new Building(bd));
     }
 
-    // ── Path editor API ───────────────────────────────────────────────
-    public List<PathData> getPaths()   { return paths; }
+    // ─────────────────────────────────────────────────────────────────
+    // PATH MANAGEMENT
+    // ─────────────────────────────────────────────────────────────────
+
+    public List<PathData> getPaths()   { return Collections.unmodifiableList(paths); }
     public void addPath(PathData p)    { paths.add(p); }
     public void removePath(PathData p) { paths.remove(p); }
 
-    private void seedDefaultPaths() {
-        PathData mainLoop = new PathData("Main Loop", 55f, "#FFDCD7C8");
-        mainLoop.addPoint(800, 680); mainLoop.addPoint(1400, 740);
-        mainLoop.addPoint(1520, 820); mainLoop.addPoint(1480, 1470);
-        mainLoop.addPoint(1450, 1570); mainLoop.addPoint(820, 1570);
-        mainLoop.addPoint(780, 1110); mainLoop.addPoint(800, 680);
-        paths.add(mainLoop);
+    // ─────────────────────────────────────────────────────────────────
+    // ENTRANCE MANAGEMENT  (Phase 5)
+    // ─────────────────────────────────────────────────────────────────
 
-        PathData lrac = new PathData("LRAC Connector", 55f, "#FFDCD7C8");
-        lrac.addPoint(820, 1160); lrac.addPoint(1450, 1160);
-        paths.add(lrac);
-
-        PathData gate = new PathData("Front Gate", 55f, "#FFDCD7C8");
-        gate.addPoint(1450, 1570); gate.addPoint(1500, 1850);
-        paths.add(gate);
-
-        PathData acad = new PathData("ACAD Connector", 55f, "#FFDCD7C8");
-        acad.addPoint(1510, 910); acad.addPoint(1680, 910);
-        paths.add(acad);
-
-        PathData gle = new PathData("GLE Connector", 55f, "#FFDCD7C8");
-        gle.addPoint(1500, 1230); gle.addPoint(1600, 1230);
-        paths.add(gle);
+    public List<EntranceData> getEntrances() {
+        return Collections.unmodifiableList(entrances);
     }
 
-    // ── Read-only views ───────────────────────────────────────────────
-    public List<Building> getBuildings()            { return Collections.unmodifiableList(buildings); }
+    public void addEntrance(EntranceData e)    { entrances.add(e); }
+    public void removeEntrance(EntranceData e) { entrances.remove(e); }
+
+    // ─────────────────────────────────────────────────────────────────
+    // META
+    // ─────────────────────────────────────────────────────────────────
+
     public MapLoader.LoadResult getLastLoadResult() { return lastLoadResult; }
-    public int getWorldWidth()                      { return WORLD_WIDTH; }
-    public int getWorldHeight()                     { return WORLD_HEIGHT; }
-
-    // ── Drawing ───────────────────────────────────────────────────────
-    public void drawGround(Graphics2D g, int ox, int oy, int sw, int sh) {
-        g.setColor(COLOR_GRASS);
-        g.fillRect(-ox, -oy, WORLD_WIDTH, WORLD_HEIGHT);
-        drawCampusPaths(g, ox, oy);
-        g.setColor(COLOR_BORDER);
-        g.setStroke(new BasicStroke(6f));
-        g.drawRect(10 - ox, 10 - oy, WORLD_WIDTH - 20, WORLD_HEIGHT - 20);
-        g.setStroke(new BasicStroke(1f));
-        drawDebugGrid(g, ox, oy);
-    }
-
-    private void drawCampusPaths(Graphics2D g, int ox, int oy) {
-        Stroke old = g.getStroke();
-        for (PathData path : paths) {
-            if (!path.isValid()) continue;
-            Color c = parseColor(path.colorARGB, COLOR_PATH);
-            g.setColor(c);
-            g.setStroke(new BasicStroke(path.strokeWidth,
-                    BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            for (int i = 0; i < path.points.size() - 1; i++) {
-                int x1 = (int) path.points.get(i)[0]     - ox;
-                int y1 = (int) path.points.get(i)[1]     - oy;
-                int x2 = (int) path.points.get(i + 1)[0] - ox;
-                int y2 = (int) path.points.get(i + 1)[1] - oy;
-                g.drawLine(x1, y1, x2, y2);
-            }
-        }
-        g.setStroke(old);
-    }
-
-    private Color parseColor(String argb, Color fallback) {
-        try {
-            long v = Long.parseLong(argb.replace("#", ""), 16);
-            return new Color((int)((v>>16)&0xFF),(int)((v>>8)&0xFF),(int)(v&0xFF),(int)((v>>24)&0xFF));
-        } catch (Exception e) { return fallback; }
-    }
-
-    private void drawDebugGrid(Graphics2D g, int ox, int oy) {
-        g.setColor(new Color(0, 0, 0, 15));
-        g.setStroke(new BasicStroke(1f));
-        for (int gx = 0; gx < WORLD_WIDTH;  gx += 100)
-            g.drawLine(gx - ox, -oy, gx - ox, WORLD_HEIGHT - oy);
-        for (int gy = 0; gy < WORLD_HEIGHT; gy += 100)
-            g.drawLine(-ox, gy - oy, WORLD_WIDTH - ox, gy - oy);
-    }
 }
