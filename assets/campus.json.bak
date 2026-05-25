@@ -4,35 +4,10 @@
     "worldWidth": 3000,
     "worldHeight": 2400,
     "author": "Admin",
-    "lastModified": "2026-05-24T16:18:28.816967Z",
+    "lastModified": "2026-05-25T01:48:48.899616600Z",
     "description": "Editor save"
   },
   "paths": [
-    {
-      "name": "Main Loop",
-      "strokeWidth": 55.0,
-      "colorARGB": "#FFDCD7C8",
-      "pointsX": [
-        800.0,
-        1400.0,
-        1520.0,
-        1480.0,
-        1450.0,
-        820.0,
-        780.0,
-        800.0
-      ],
-      "pointsZ": [
-        680.0,
-        740.0,
-        820.0,
-        1470.0,
-        1570.0,
-        1570.0,
-        1110.0,
-        680.0
-      ]
-    },
     {
       "name": "LRAC Connector",
       "strokeWidth": 55.0,
@@ -51,11 +26,11 @@
       "strokeWidth": 55.0,
       "colorARGB": "#FFDCD7C8",
       "pointsX": [
-        1450.0,
+        1440.0,
         1500.0
       ],
       "pointsZ": [
-        1570.0,
+        1500.0,
         1850.0
       ]
     },
@@ -73,16 +48,42 @@
       ]
     },
     {
-      "name": "GLE Connector",
+      "name": "PATH 1",
       "strokeWidth": 55.0,
       "colorARGB": "#FFDCD7C8",
       "pointsX": [
-        1500.0,
-        1600.0
+        1440.0,
+        1440.0
       ],
       "pointsZ": [
-        1230.0,
-        1230.0
+        1500.0,
+        1160.0
+      ]
+    },
+    {
+      "name": "PATH 2",
+      "strokeWidth": 55.0,
+      "colorARGB": "#FFDCD7C8",
+      "pointsX": [
+        1560.0,
+        1440.0
+      ],
+      "pointsZ": [
+        1160.0,
+        1160.0
+      ]
+    },
+    {
+      "name": "PATH 3",
+      "strokeWidth": 55.0,
+      "colorARGB": "#FFDCD7C8",
+      "pointsX": [
+        1440.0,
+        1440.0
+      ],
+      "pointsZ": [
+        900.0,
+        1160.0
       ]
     }
   ],
@@ -232,7 +233,7 @@
       "x": 1270.0,
       "z": 1270.0,
       "width": 70.0,
-      "depth": 90.0,
+      "depth": 100.0,
       "floors": 2,
       "colorARGB": "#FFE67E22",
       "rotationDegrees": 360.0,
@@ -398,20 +399,6 @@
         1780,
         1780
       ]
-    },
-    {
-      "name": "NEW BLDG 1",
-      "x": 840.0,
-      "z": 1020.0,
-      "width": 120.0,
-      "depth": 100.0,
-      "floors": 2,
-      "colorARGB": "#FF888888",
-      "rotationDegrees": 0.0,
-      "collisionEnabled": true,
-      "tag": "new",
-      "polygonX": null,
-      "polygonZ": null
     }
   ]
 }

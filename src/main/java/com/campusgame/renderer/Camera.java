@@ -19,7 +19,6 @@ import com.campusgame.map.CampusMap;
  *   int screenY = (int)(worldY - camera.getOffsetY());
  *
  * Future expansion:
- *  - Smooth/lerp follow
  *  - Zoom level
  *  - Shake effect
  */
@@ -38,30 +37,29 @@ public class Camera {
         this.screenHeight = screenHeight;
     }
 
+    // ---------------------------------------------------------------
+    // FOLLOW
+    // ---------------------------------------------------------------
+
     /**
      * Smoothly moves camera toward the player center.
      * Called every frame after player.update().
      */
     public void follow(Player player) {
-        // Target: center player in screen
         float targetX = player.getCenterX() - screenWidth  / 2f;
         float targetY = player.getCenterY() - screenHeight / 2f;
 
-        // Lerp for smooth follow
         offsetX += (targetX - offsetX) * LERP;
         offsetY += (targetY - offsetY) * LERP;
 
-        // Clamp to world bounds
-        offsetX = Math.max(0, Math.min(offsetX, CampusMap.WORLD_WIDTH  - screenWidth));
-        offsetY = Math.max(0, Math.min(offsetY, CampusMap.WORLD_HEIGHT - screenHeight));
+        clamp();
     }
 
     /** Snap camera instantly to player (no lerp). Useful on spawn/teleport. */
     public void snapTo(Player player) {
         offsetX = player.getCenterX() - screenWidth  / 2f;
         offsetY = player.getCenterY() - screenHeight / 2f;
-        offsetX = Math.max(0, Math.min(offsetX, CampusMap.WORLD_WIDTH  - screenWidth));
-        offsetY = Math.max(0, Math.min(offsetY, CampusMap.WORLD_HEIGHT - screenHeight));
+        clamp();
     }
 
     // ---------------------------------------------------------------
@@ -73,7 +71,7 @@ public class Camera {
         return (int)(worldX - offsetX);
     }
 
-    /** Convert world Y to screen Y. */
+    /** Convert world Z/Y to screen Y. */
     public int worldToScreenY(float worldY) {
         return (int)(worldY - offsetY);
     }
@@ -83,17 +81,47 @@ public class Camera {
         return screenX + offsetX;
     }
 
-    /** Convert screen Y to world Y. */
+    /** Convert screen Y to world Z/Y. */
     public float screenToWorldY(int screenY) {
         return screenY + offsetY;
+    }
+
+    // ---------------------------------------------------------------
+    // OFFSET  (used by EditorCamera for pan / middle-mouse drag)
+    // ---------------------------------------------------------------
+
+    /**
+     * Directly set the viewport offset.
+     * EditorCamera calls this for keyboard pan and middle-mouse drag.
+     * Automatically clamped to world bounds.
+     */
+    public void setOffset(float ox, float oy) {
+        offsetX = ox;
+        offsetY = oy;
+        clamp();
     }
 
     // ---------------------------------------------------------------
     // GETTERS
     // ---------------------------------------------------------------
 
+    /** Integer offset — used by legacy renderers that subtract directly. */
     public int getOffsetX() { return (int) offsetX; }
     public int getOffsetY() { return (int) offsetY; }
+
+    /** Float offset — used by EditorCamera for smooth pan math. */
+    public float getOffsetXf() { return offsetX; }
+    public float getOffsetYf() { return offsetY; }
+
     public int getScreenWidth()  { return screenWidth;  }
     public int getScreenHeight() { return screenHeight; }
+
+    // ---------------------------------------------------------------
+    // INTERNAL
+    // ---------------------------------------------------------------
+
+    private void clamp() {
+        offsetX = Math.max(0, Math.min(offsetX, CampusMap.WORLD_WIDTH  - screenWidth));
+        offsetY = Math.max(0, Math.min(offsetY, CampusMap.WORLD_HEIGHT - screenHeight));
+    }
 }

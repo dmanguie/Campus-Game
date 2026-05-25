@@ -16,6 +16,9 @@ public class ShapeEditState {
     private boolean      dragging       = false;
     private BuildingData source         = null;
     private boolean      active         = false;
+    private boolean appendMode = false;
+    public boolean isAppendMode()          { return appendMode; }
+    public void    setAppendMode(boolean v){ appendMode = v; }
 
     public void beginEdit(BuildingData b) {
         source = b; active = true; hoveredVertex = -1; selectedVertex = -1; dragging = false;
@@ -32,6 +35,7 @@ public class ShapeEditState {
     public void endEdit() {
         active=false; source=null; verticesX=null; verticesZ=null;
         hoveredVertex=-1; selectedVertex=-1; dragging=false;
+        appendMode = false;
     }
 
     public void applyPreset(ShapePreset preset, BuildingData current) {
