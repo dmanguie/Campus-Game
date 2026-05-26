@@ -10,6 +10,20 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * MAP LOADER (map/io/MapLoader.java)
+ * ------------------------------------
+ * Reads campus.json → BuildingData, PathData, EntranceData lists.
+ *
+ * Phase 5: added EntranceData loading.
+ * Field names: supports both new (width/colorHex) and old (strokeWidth/colorARGB)
+ * path fields via MapJson.PathJson.toPathData() backward-compat logic.
+ *
+ * Load priority:
+ *   1. assets/campus.json  (file system)
+ *   2. campus.json classpath (inside JAR)
+ *   3. MapData.BUILDINGS fallback (hardcoded defaults)
+ */
 public class MapLoader {
 
     public static final String DEFAULT_PATH = "assets/campus.json";
@@ -36,13 +50,16 @@ public class MapLoader {
         MapJson mj = gson.fromJson(reader, MapJson.class);
         if (mj == null || mj.buildings == null) return LoadResult.fallback();
 
+        // Buildings
         List<BuildingData> buildings = new ArrayList<>();
-        for (MapJson.BuildingJson bj : mj.buildings) buildings.add(convert(bj));
+        for (MapJson.BuildingJson bj : mj.buildings) buildings.add(convertBuilding(bj));
 
+        // Paths — toPathData() handles old/new field names automatically
         List<PathData> paths = new ArrayList<>();
         if (mj.paths != null)
             for (MapJson.PathJson pj : mj.paths) paths.add(pj.toPathData());
 
+        // Entrances (Phase 5) — graceful if missing from older files
         List<EntranceData> entrances = new ArrayList<>();
         if (mj.entrances != null)
             for (MapJson.EntranceJson ej : mj.entrances) entrances.add(ej.toEntranceData());
@@ -53,10 +70,11 @@ public class MapLoader {
 
         System.out.printf("[MapLoader] Loaded %d buildings, %d paths, %d entrances from %s%n",
                 buildings.size(), paths.size(), entrances.size(), src);
+
         return new LoadResult(buildings, paths, entrances, meta, src);
     }
 
-    private BuildingData convert(MapJson.BuildingJson bj) {
+    private BuildingData convertBuilding(MapJson.BuildingJson bj) {
         int    color = parseColor(bj.colorARGB);
         String tag   = bj.tag != null ? bj.tag : "building";
         if (bj.polygonX != null && bj.polygonZ != null) {
@@ -67,6 +85,7 @@ public class MapLoader {
                 bj.floors, color, bj.rotationDegrees, bj.collisionEnabled, tag);
     }
 
+    /** Parses "#FFRRGGBB" or "#RRGGBB" → packed int. Gray on error. */
     public static int parseColor(String hex) {
         if (hex == null || hex.isEmpty()) return 0xFF888888;
         try {
@@ -76,16 +95,20 @@ public class MapLoader {
         } catch (NumberFormatException e) { return 0xFF888888; }
     }
 
-    public static class LoadResult {
-        public final List<BuildingData> buildings;
-        public final List<PathData>     paths;
-        public final List<EntranceData> entrances;
-        public final MapJson.MapMeta    meta;
-        public final String             source;
+    // ── Load result ───────────────────────────────────────────────────
 
-        public LoadResult(List<BuildingData> buildings, List<PathData> paths,
+    public static class LoadResult {
+        public final List<BuildingData>  buildings;
+        public final List<PathData>      paths;
+        public final List<EntranceData>  entrances;
+        public final MapJson.MapMeta     meta;
+        public final String              source;
+
+        public LoadResult(List<BuildingData> buildings,
+                          List<PathData>     paths,
                           List<EntranceData> entrances,
-                          MapJson.MapMeta meta, String source) {
+                          MapJson.MapMeta    meta,
+                          String             source) {
             this.buildings = buildings;
             this.paths     = paths;
             this.entrances = entrances;
@@ -93,9 +116,11 @@ public class MapLoader {
             this.source    = source;
         }
 
-        // Backward-compat constructor for fallback (no entrances)
-        public LoadResult(List<BuildingData> buildings, List<PathData> paths,
-                          MapJson.MapMeta meta, String source) {
+        /** Backward-compat: no entrances. */
+        public LoadResult(List<BuildingData> buildings,
+                          List<PathData>     paths,
+                          MapJson.MapMeta    meta,
+                          String             source) {
             this(buildings, paths, new ArrayList<>(), meta, source);
         }
 

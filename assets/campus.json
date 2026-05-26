@@ -4,7 +4,7 @@
     "worldWidth": 3000,
     "worldHeight": 2400,
     "author": "Admin",
-    "lastModified": "2026-05-25T04:25:09.853792200Z",
+    "lastModified": "2026-05-26T07:19:01.975440100Z",
     "description": "Editor save"
   },
   "paths": [
@@ -12,6 +12,8 @@
       "name": "PATH 1",
       "width": 55.0,
       "colorHex": "#FFDCD7C8",
+      "strokeWidth": 0.0,
+      "colorARGB": null,
       "pointsX": [
         840.0,
         840.0
@@ -25,6 +27,8 @@
       "name": "PATH 2",
       "width": 55.0,
       "colorHex": "#FFDCD7C8",
+      "strokeWidth": 0.0,
+      "colorARGB": null,
       "pointsX": [
         1520.0,
         1480.0
@@ -38,6 +42,8 @@
       "name": "PATH 3",
       "width": 55.0,
       "colorHex": "#FFDCD7C8",
+      "strokeWidth": 0.0,
+      "colorARGB": null,
       "pointsX": [
         1480.0,
         1480.0
@@ -134,25 +140,11 @@
       "polygonZ": null
     },
     {
-      "name": "RTL BLDG",
-      "x": 930.0,
-      "z": 1190.0,
-      "width": 420.0,
-      "depth": 55.0,
-      "floors": 2,
-      "colorARGB": "#FFE67E22",
-      "rotationDegrees": 0.0,
-      "collisionEnabled": true,
-      "tag": "academic",
-      "polygonX": null,
-      "polygonZ": null
-    },
-    {
       "name": "RTL BLDG 1",
-      "x": 930.0,
-      "z": 1190.0,
-      "width": 420.0,
-      "depth": 80.0,
+      "x": 800.0,
+      "z": 1100.0,
+      "width": 500.0,
+      "depth": 100.0,
       "floors": 2,
       "colorARGB": "#FFE67E22",
       "rotationDegrees": 0.0,
@@ -163,10 +155,10 @@
     },
     {
       "name": "RTL BLDG 2",
-      "x": 930.0,
-      "z": 1370.0,
-      "width": 420.0,
-      "depth": 80.0,
+      "x": 800.0,
+      "z": 1400.0,
+      "width": 500.0,
+      "depth": 200.0,
       "floors": 2,
       "colorARGB": "#FFE67E22",
       "rotationDegrees": 0.0,
@@ -291,10 +283,10 @@
     },
     {
       "name": "NGE BLDG 1",
-      "x": 1100.0,
-      "z": 1540.0,
-      "width": 230.0,
-      "depth": 70.0,
+      "x": 1000.0,
+      "z": 1700.0,
+      "width": 300.0,
+      "depth": 100.0,
       "floors": 4,
       "colorARGB": "#FFF39C12",
       "rotationDegrees": 0.0,
@@ -305,24 +297,38 @@
     },
     {
       "name": "NGE BLDG 2",
-      "x": 1100.0,
-      "z": 1800.0,
-      "width": 180.0,
-      "depth": 80.0,
+      "x": 0.0,
+      "z": 0.0,
+      "width": 0.0,
+      "depth": 0.0,
       "floors": 4,
       "colorARGB": "#FFF39C12",
       "rotationDegrees": 0.0,
       "collisionEnabled": true,
       "tag": "academic",
-      "polygonX": null,
-      "polygonZ": null
+      "polygonX": [
+        900,
+        1320,
+        1320,
+        1260,
+        1260,
+        900
+      ],
+      "polygonZ": [
+        2100,
+        2100,
+        2240,
+        2240,
+        2300,
+        2300
+      ]
     },
     {
       "name": "NGE BLDG 3",
-      "x": 1100.0,
-      "z": 1600.0,
-      "width": 100.0,
-      "depth": 200.0,
+      "x": 900.0,
+      "z": 1800.0,
+      "width": 200.0,
+      "depth": 300.0,
       "floors": 4,
       "colorARGB": "#FFF39C12",
       "rotationDegrees": 0.0,
@@ -343,24 +349,18 @@
       "collisionEnabled": true,
       "tag": "academic",
       "polygonX": [
-        1280,
-        1380,
-        1380,
-        1380,
-        1360,
-        1320,
-        1320,
-        1280
+        1200,
+        1400,
+        1400,
+        1400,
+        1200
       ],
       "polygonZ": [
-        1600,
-        1600,
-        1700,
-        1820,
-        1820,
-        1820,
-        1880,
-        1880
+        1800,
+        1800,
+        1900,
+        2100,
+        2100
       ]
     },
     {
@@ -379,6 +379,7 @@
         420,
         480,
         480,
+        420,
         360
       ],
       "polygonZ": [
@@ -386,36 +387,128 @@
         960,
         1000,
         1100,
+        1140,
         1100
       ]
     }
   ],
   "entrances": [
     {
-      "id": "entrance_1",
-      "buildingName": "SAL BLDG",
-      "label": "SAL BLDG",
-      "worldX": 740.0,
-      "worldZ": 980.0,
+      "id": "entrance_4",
+      "buildingName": "NGE BLDG 4",
+      "label": "NGE BLDG 4",
+      "worldX": 1280.0,
+      "worldZ": 1740.0,
       "triggerRadius": 55.0,
-      "interiorSceneId": "",
-      "interiorSpawnX": 740.0,
-      "interiorSpawnZ": 1030.0,
-      "exteriorSpawnX": 740.0,
-      "exteriorSpawnZ": 1050.0
+      "interiorSceneId": "main_hall_interior",
+      "interiorSpawnX": 1360.0,
+      "interiorSpawnZ": 1670.0,
+      "exteriorSpawnX": 1360.0,
+      "exteriorSpawnZ": 1690.0
     },
     {
-      "id": "entrance_2",
-      "buildingName": "SAL BLDG",
-      "label": "SAL BLDG",
-      "worldX": 720.0,
-      "worldZ": 920.0,
+      "id": "entrance_6",
+      "buildingName": "NGE BLDG 1",
+      "label": "NGE BLDG 1",
+      "worldX": 1020.0,
+      "worldZ": 1740.0,
       "triggerRadius": 55.0,
       "interiorSceneId": "",
-      "interiorSpawnX": 720.0,
-      "interiorSpawnZ": 970.0,
-      "exteriorSpawnX": 720.0,
-      "exteriorSpawnZ": 990.0
+      "interiorSpawnX": 1020.0,
+      "interiorSpawnZ": 1790.0,
+      "exteriorSpawnX": 1020.0,
+      "exteriorSpawnZ": 1810.0
+    },
+    {
+      "id": "entrance_7",
+      "buildingName": "NGE BLDG 1",
+      "label": "NGE BLDG 1",
+      "worldX": 1120.0,
+      "worldZ": 1800.0,
+      "triggerRadius": 55.0,
+      "interiorSceneId": "library_interior",
+      "interiorSpawnX": 1120.0,
+      "interiorSpawnZ": 1850.0,
+      "exteriorSpawnX": 1120.0,
+      "exteriorSpawnZ": 1870.0
+    },
+    {
+      "id": "entrance_8",
+      "buildingName": "NGE BLDG 2",
+      "label": "NGE BLDG 2",
+      "worldX": 1120.0,
+      "worldZ": 2100.0,
+      "triggerRadius": 55.0,
+      "interiorSceneId": "library_interior",
+      "interiorSpawnX": 1120.0,
+      "interiorSpawnZ": 2150.0,
+      "exteriorSpawnX": 1120.0,
+      "exteriorSpawnZ": 2170.0
+    },
+    {
+      "id": "entrance_9",
+      "buildingName": "NGE BLDG 2",
+      "label": "NGE BLDG 2",
+      "worldX": 1180.0,
+      "worldZ": 2100.0,
+      "triggerRadius": 55.0,
+      "interiorSceneId": "gym_interior",
+      "interiorSpawnX": 1180.0,
+      "interiorSpawnZ": 2150.0,
+      "exteriorSpawnX": 1180.0,
+      "exteriorSpawnZ": 2170.0
+    },
+    {
+      "id": "entrance_10",
+      "buildingName": "NGE BLDG 4",
+      "label": "NGE BLDG 4",
+      "worldX": 1180.0,
+      "worldZ": 1800.0,
+      "triggerRadius": 55.0,
+      "interiorSceneId": "gym_interior",
+      "interiorSpawnX": 1180.0,
+      "interiorSpawnZ": 1850.0,
+      "exteriorSpawnX": 1180.0,
+      "exteriorSpawnZ": 1870.0
+    },
+    {
+      "id": "entrance_10",
+      "buildingName": "NGE BLDG 4",
+      "label": "NGE BLDG 4",
+      "worldX": 1380.0,
+      "worldZ": 2080.0,
+      "triggerRadius": 55.0,
+      "interiorSceneId": "library_interior",
+      "interiorSpawnX": 1380.0,
+      "interiorSpawnZ": 2130.0,
+      "exteriorSpawnX": 1380.0,
+      "exteriorSpawnZ": 2150.0
+    },
+    {
+      "id": "entrance_11",
+      "buildingName": "NGE BLDG 4",
+      "label": "NGE BLDG 4",
+      "worldX": 1380.0,
+      "worldZ": 1820.0,
+      "triggerRadius": 55.0,
+      "interiorSceneId": "library_interior",
+      "interiorSpawnX": 1380.0,
+      "interiorSpawnZ": 1870.0,
+      "exteriorSpawnX": 1380.0,
+      "exteriorSpawnZ": 1890.0
+    },
+    {
+      "id": "entrance_12",
+      "buildingName": "LRAC",
+      "label": "LRAC",
+      "worldX": 1000.0,
+      "worldZ": 1000.0,
+      "triggerRadius": 55.0,
+      "interiorSceneId": "main_hall_interior",
+      "interiorSpawnX": 1000.0,
+      "interiorSpawnZ": 1050.0,
+      "exteriorSpawnX": 1000.0,
+      "exteriorSpawnZ": 1070.0
     }
   ]
 }

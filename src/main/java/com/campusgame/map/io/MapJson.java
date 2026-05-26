@@ -5,6 +5,21 @@ import com.campusgame.map.data.PathData;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * MAP JSON (map/io/MapJson.java)
+ * --------------------------------
+ * Gson-friendly POJO that mirrors campus.json exactly.
+ * No domain logic — pure serialization boundary.
+ *
+ * Phase 5: added EntranceJson for door/entrance data.
+ *
+ * PathJson field alignment with PathData:
+ *   PathJson.width    ↔ PathData.width
+ *   PathJson.colorHex ↔ PathData.colorHex
+ *
+ * NOTE: campus.json files saved by older versions used "strokeWidth" and
+ * "colorARGB". The loader handles both spellings via graceful fallback.
+ */
 public class MapJson {
 
     public MapMeta            mapMeta;
@@ -12,6 +27,7 @@ public class MapJson {
     public List<BuildingJson> buildings;
     public List<EntranceJson> entrances;   // Phase 5
 
+    // ── Map metadata ─────────────────────────────────────────────────
     public static class MapMeta {
         public String name;
         public int    worldWidth;
@@ -31,28 +47,47 @@ public class MapJson {
         }
     }
 
+    // ── Path JSON ─────────────────────────────────────────────────────
     public static class PathJson {
         public String      name;
-        public float       width;
-        public String      colorHex;
+        public float       width;       // matches PathData.width
+        public String      colorHex;    // matches PathData.colorHex
+
+        // Legacy field names — Gson will populate these if present in old JSON
+        public float       strokeWidth; // old name for width
+        public String      colorARGB;   // old name for colorHex
+
         public List<Float> pointsX;
         public List<Float> pointsZ;
 
         public PathJson() {}
 
+        /** Convert a live PathData → PathJson for saving. */
         public static PathJson from(PathData pd) {
-            PathJson j  = new PathJson();
-            j.name      = pd.name;
-            j.width     = pd.width;
-            j.colorHex  = pd.colorHex;
-            j.pointsX   = new ArrayList<>();
-            j.pointsZ   = new ArrayList<>();
+            PathJson j   = new PathJson();
+            j.name       = pd.name;
+            j.width      = pd.width;
+            j.colorHex   = pd.colorHex;
+            j.pointsX    = new ArrayList<>();
+            j.pointsZ    = new ArrayList<>();
             for (float[] p : pd.points) { j.pointsX.add(p[0]); j.pointsZ.add(p[1]); }
             return j;
         }
 
+        /**
+         * Convert a deserialized PathJson → PathData.
+         * Handles both new field names (width/colorHex) and old names
+         * (strokeWidth/colorARGB) so existing campus.json files still load.
+         */
         public PathData toPathData() {
-            PathData pd = new PathData(name, width, colorHex);
+            // Resolve width — prefer new name, fall back to old
+            float   resolvedWidth    = (width > 0) ? width : (strokeWidth > 0 ? strokeWidth : 55f);
+            // Resolve color — prefer new name, fall back to old
+            String  resolvedColorHex = (colorHex != null && !colorHex.isEmpty())
+                    ? colorHex
+                    : (colorARGB != null ? colorARGB : "#FFDCD7C8");
+
+            PathData pd = new PathData(name, resolvedWidth, resolvedColorHex);
             if (pointsX != null && pointsZ != null) {
                 int n = Math.min(pointsX.size(), pointsZ.size());
                 for (int i = 0; i < n; i++) pd.addPoint(pointsX.get(i), pointsZ.get(i));
@@ -61,7 +96,7 @@ public class MapJson {
         }
     }
 
-    // ── Entrance JSON record ──────────────────────────────────────────
+    // ── Entrance JSON (Phase 5) ───────────────────────────────────────
     public static class EntranceJson {
         public String id;
         public String buildingName;
@@ -94,15 +129,18 @@ public class MapJson {
         }
 
         public EntranceData toEntranceData() {
-            EntranceData e    = new EntranceData(id, buildingName, label,
-                    worldX, worldZ, interiorSceneId,
+            EntranceData e  = new EntranceData(
+                    id, buildingName, label,
+                    worldX, worldZ,
+                    interiorSceneId,
                     interiorSpawnX, interiorSpawnZ,
                     exteriorSpawnX, exteriorSpawnZ);
-            e.triggerRadius   = triggerRadius;
+            e.triggerRadius = triggerRadius > 0 ? triggerRadius : 55f;
             return e;
         }
     }
 
+    // ── Building JSON ─────────────────────────────────────────────────
     public static class BuildingJson {
         public String  name;
         public float   x, z, width, depth;

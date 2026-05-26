@@ -4,15 +4,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A campus pathway: an ordered list of waypoints rendered as a
- * thick stroked polyline. Saved/loaded via MapJson.PathJson.
+ * PATH DATA (map/data/PathData.java)
+ * ------------------------------------
+ * A campus pathway: ordered waypoints rendered as a thick stroked polyline.
+ * Saved/loaded via MapJson.PathJson.
+ *
+ * Field names match the Phase 5 MapJson / CampusMap:
+ *   width    — stroke width in world units (was strokeWidth)
+ *   colorHex — "#FFRRGGBB" or "#RRGGBB" colour string (was colorARGB)
+ *
+ * The old field names caused a mismatch between PathData, MapJson.PathJson,
+ * CampusMap.drawCampusPaths(), MapSaver, and MapLoader. This version aligns all five.
  */
 public class PathData {
 
     public String        name;
-    public float         width;      // canonical stroke width
-    public String        colorHex;   // canonical colour string
-    public List<float[]> points;
+    public float         width;       // stroke width in world units
+    public String        colorHex;    // "#FFDCD7C8" etc.
+    public List<float[]> points;      // each float[]{worldX, worldZ}
 
     public PathData(String name, float width, String colorHex) {
         this.name     = name;
@@ -34,5 +43,5 @@ public class PathData {
         if (points.size() > 2) points.remove(idx);
     }
 
-    public boolean isValid() { return points.size() >= 2; }
+    public boolean isValid() { return points != null && points.size() >= 2; }
 }

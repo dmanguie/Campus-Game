@@ -2,7 +2,6 @@ package com.campusgame.input;
 
 import com.campusgame.editor.EditorMode;
 import com.campusgame.editor.EditorState;
-import com.campusgame.editor.PathEditState;
 import com.campusgame.editor.ShapeEditState;
 import com.campusgame.editor.layer.LayerManager;
 import com.campusgame.entities.Player;
@@ -11,20 +10,19 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 
 /**
- * INPUT HANDLER
- * Phase 5: adds [N] hotkey to switch to ENTRANCE tool in editor.
+ * INPUT HANDLER (input/InputHandler.java)
+ * Phase 5: added setOnInteract([E] key) and setMovementBlocked (during transitions).
  */
 public class InputHandler extends KeyAdapter {
 
     private boolean up, down, left, right, sprint;
-    private EditorMode editor = null;
+    private EditorMode editor          = null;
+    private Runnable   onInteractPressed = null;
+    private boolean    movementBlocked   = false;
 
-    private Runnable onInteractPressed = null;
-    private boolean  movementBlocked   = false;
-
-    public void setOnInteract(Runnable r)         { this.onInteractPressed = r; }
-    public void setMovementBlocked(boolean block) { this.movementBlocked   = block; }
-    public void setEditor(EditorMode editor)      { this.editor = editor; }
+    public void setEditor(EditorMode editor)          { this.editor           = editor; }
+    public void setOnInteract(Runnable r)             { this.onInteractPressed = r; }
+    public void setMovementBlocked(boolean blocked)   { this.movementBlocked   = blocked; }
 
     @Override
     public void keyPressed(KeyEvent e) {
@@ -33,26 +31,23 @@ public class InputHandler extends KeyAdapter {
         boolean alt  = e.isAltDown();
 
         // F1: toggle editor
-        if (key == KeyEvent.VK_F1 && editor != null) {
-            editor.toggleEditor();
-            return;
-        }
+        if (key == KeyEvent.VK_F1 && editor != null) { editor.toggleEditor(); return; }
 
         if (editor != null && editor.isActive()) {
 
-            // ── SHAPE EDIT sub-keys ───────────────────────────────────
+            // SHAPE EDIT sub-keys
             if (editor.getState().getCurrentTool() == EditorState.Tool.SHAPE_EDIT) {
                 if (ctrl && key == KeyEvent.VK_Z) { editor.undo();    return; }
                 if (ctrl && key == KeyEvent.VK_S) { editor.saveMap(); return; }
                 switch (key) {
-                    case KeyEvent.VK_1      -> editor.applyShapePreset(ShapeEditState.ShapePreset.SQUARE);
-                    case KeyEvent.VK_2      -> editor.applyShapePreset(ShapeEditState.ShapePreset.RECTANGLE);
-                    case KeyEvent.VK_3      -> editor.applyShapePreset(ShapeEditState.ShapePreset.CIRCLE_8);
-                    case KeyEvent.VK_4      -> editor.applyShapePreset(ShapeEditState.ShapePreset.CIRCLE_16);
-                    case KeyEvent.VK_5      -> editor.applyShapePreset(ShapeEditState.ShapePreset.POLYGON);
-                    case KeyEvent.VK_ENTER  -> editor.commitShapeEdit();
-                    case KeyEvent.VK_ESCAPE -> editor.cancelShapeEdit();
-                    case KeyEvent.VK_DELETE -> {
+                    case KeyEvent.VK_1     -> editor.applyShapePreset(ShapeEditState.ShapePreset.SQUARE);
+                    case KeyEvent.VK_2     -> editor.applyShapePreset(ShapeEditState.ShapePreset.RECTANGLE);
+                    case KeyEvent.VK_3     -> editor.applyShapePreset(ShapeEditState.ShapePreset.CIRCLE_8);
+                    case KeyEvent.VK_4     -> editor.applyShapePreset(ShapeEditState.ShapePreset.CIRCLE_16);
+                    case KeyEvent.VK_5     -> editor.applyShapePreset(ShapeEditState.ShapePreset.POLYGON);
+                    case KeyEvent.VK_ENTER -> editor.commitShapeEdit();
+                    case KeyEvent.VK_ESCAPE-> editor.cancelShapeEdit();
+                    case KeyEvent.VK_DELETE-> {
                         int hov = editor.getState().getShapeEdit().getHoveredVertex();
                         if (hov >= 0) editor.getState().getShapeEdit().deleteVertex(hov);
                     }
@@ -60,25 +55,14 @@ public class InputHandler extends KeyAdapter {
                 return;
             }
 
-            // ── PATH EDIT sub-keys ────────────────────────────────────
+            // PATH EDIT sub-keys
             if (editor.getState().getCurrentTool() == EditorState.Tool.PATH_EDIT) {
                 if (ctrl && key == KeyEvent.VK_Z) { editor.undo();    return; }
                 if (ctrl && key == KeyEvent.VK_S) { editor.saveMap(); return; }
                 switch (key) {
-                    case KeyEvent.VK_ENTER  -> { editor.commitPathEdit(); return; }
-                    case KeyEvent.VK_ESCAPE -> { editor.cancelPathEdit(); return; }
-                    case KeyEvent.VK_A -> {
-                        PathEditState pe = editor.getState().getPathEdit();
-                        if (pe.isActive()) {
-                            boolean nowAppend = !pe.isAppendMode();
-                            pe.setAppendMode(nowAppend);
-                            editor.getState().showStatus(nowAppend
-                                    ? "Append mode ON — click to add waypoints, Enter=finish"
-                                    : "Append mode OFF — drag to move points, Del=delete path");
-                        }
-                        return;
-                    }
-                    case KeyEvent.VK_DELETE -> {
+                    case KeyEvent.VK_ENTER -> { editor.commitPathEdit(); return; }
+                    case KeyEvent.VK_ESCAPE-> { editor.cancelPathEdit(); return; }
+                    case KeyEvent.VK_DELETE-> {
                         int hov = editor.getState().getPathEdit().getHoveredPoint();
                         if (hov >= 0) editor.getState().getPathEdit().deletePoint(hov);
                         else          editor.deleteSelectedPath();
@@ -87,7 +71,7 @@ public class InputHandler extends KeyAdapter {
                 }
             }
 
-            // ── ENTRANCE tool sub-keys ────────────────────────────────
+            // ENTRANCE tool sub-keys
             if (editor.getState().getCurrentTool() == EditorState.Tool.ENTRANCE) {
                 if (ctrl && key == KeyEvent.VK_S) { editor.saveMap(); return; }
                 if (ctrl && key == KeyEvent.VK_Z) { editor.undo();    return; }
@@ -98,12 +82,10 @@ public class InputHandler extends KeyAdapter {
                 }
             }
 
-            // ── Layer hotkeys ─────────────────────────────────────────
+            // Layer hotkeys (Alt+1-5 = lock, 1-5 = visibility)
             if (editor.getState().getCurrentTool() != EditorState.Tool.SHAPE_EDIT
                     && editor.getState().getCurrentTool() != EditorState.Tool.PATH_EDIT) {
-
                 LayerManager lm = editor.getState().getLayerManager();
-
                 if (alt) {
                     String msg = switch (key) {
                         case KeyEvent.VK_1 -> lm.handleLockHotkey(1);
@@ -115,7 +97,6 @@ public class InputHandler extends KeyAdapter {
                     };
                     if (msg != null) { editor.getState().showStatus(msg); return; }
                 } else if (editor.getState().getCurrentTool() != EditorState.Tool.ENTRANCE) {
-                    // Don't intercept 1-5 in entrance mode (no presets there)
                     String msg = switch (key) {
                         case KeyEvent.VK_1 -> lm.handleVisibilityHotkey(1);
                         case KeyEvent.VK_2 -> lm.handleVisibilityHotkey(2);
@@ -128,18 +109,18 @@ public class InputHandler extends KeyAdapter {
                 }
             }
 
-            // ── General editor keys ───────────────────────────────────
+            // General editor keys
             switch (key) {
                 case KeyEvent.VK_P -> editor.switchToPlace();
                 case KeyEvent.VK_S -> { if (ctrl) editor.saveMap(); else editor.switchToSelect(); }
                 case KeyEvent.VK_X -> editor.switchToDelete();
                 case KeyEvent.VK_V -> editor.switchToShapeEdit();
                 case KeyEvent.VK_R -> editor.switchToPathEdit();
-                case KeyEvent.VK_N -> editor.switchToEntrance();   // NEW
+                case KeyEvent.VK_N -> editor.switchToEntrance();
                 case KeyEvent.VK_G -> editor.cycleGridSnap();
                 case KeyEvent.VK_Z -> { if (ctrl) editor.undo(); }
-                case KeyEvent.VK_DELETE -> editor.deleteSelected();
-                case KeyEvent.VK_ESCAPE -> editor.escape();
+                case KeyEvent.VK_DELETE    -> editor.deleteSelected();
+                case KeyEvent.VK_ESCAPE    -> editor.escape();
                 case KeyEvent.VK_PAGE_UP   -> editor.nextFloor();
                 case KeyEvent.VK_PAGE_DOWN -> editor.prevFloor();
                 case KeyEvent.VK_OPEN_BRACKET  -> editor.resizeSelected(-10,   0);
@@ -152,7 +133,7 @@ public class InputHandler extends KeyAdapter {
             return;
         }
 
-        // ── Normal gameplay keys ──────────────────────────────────────
+        // Normal gameplay
         switch (key) {
             case KeyEvent.VK_W, KeyEvent.VK_UP    -> up     = true;
             case KeyEvent.VK_S, KeyEvent.VK_DOWN  -> down   = true;
@@ -180,17 +161,13 @@ public class InputHandler extends KeyAdapter {
         }
         float speed = sprint ? Player.SPEED * 1.8f : Player.SPEED;
         float vx = 0, vy = 0;
-        if (left)  vx -= speed;
-        if (right) vx += speed;
-        if (up)    vy -= speed;
-        if (down)  vy += speed;
+        if (left)  vx -= speed; if (right) vx += speed;
+        if (up)    vy -= speed; if (down)  vy += speed;
         if (vx != 0 && vy != 0) {
-            float mag = (float) Math.sqrt(vx * vx + vy * vy);
-            vx = vx / mag * speed;
-            vy = vy / mag * speed;
+            float mag = (float) Math.sqrt(vx*vx + vy*vy);
+            vx = vx/mag*speed; vy = vy/mag*speed;
         }
-        player.vx = vx;
-        player.vy = vy;
+        player.vx = vx; player.vy = vy;
     }
 
     public boolean isUp()     { return up;     }

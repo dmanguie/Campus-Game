@@ -5,10 +5,9 @@ import com.campusgame.interaction.InteractionContext;
 import com.campusgame.map.data.EntranceData;
 
 /**
+ * DOOR TRIGGER (entities/DoorTrigger.java)
  * Placed at a campus building entrance.
- * When triggered, starts the transition into the linked InteriorScene.
- *
- * Future: add locked state, prerequisite quest check.
+ * When player presses [E] within range, starts the interior transition.
  */
 public class DoorTrigger implements Interactable {
 

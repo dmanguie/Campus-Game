@@ -5,11 +5,9 @@ import com.campusgame.interaction.InteractionContext;
 import com.campusgame.map.data.EntranceData;
 
 /**
+ * EXIT TRIGGER (entities/ExitTrigger.java)
  * Placed near the door of an interior scene.
- * When triggered, returns the player to the exterior campus world.
- *
- * The exit's worldX/Z is in INTERIOR coordinate space.
- * The exterior return position comes from InteriorManager's saved state.
+ * When player presses [E] within range, returns them to the exterior campus.
  */
 public class ExitTrigger implements Interactable {
 
@@ -36,7 +34,7 @@ public class ExitTrigger implements Interactable {
         ctx.interiorManager.exitToExterior(ctx.player, ctx.camera);
     }
 
-    @Override public float      getWorldX() { return exitData.worldX; }
-    @Override public float      getWorldZ() { return exitData.worldZ; }
-    public    EntranceData getExitData()    { return exitData; }
+    @Override public float      getWorldX()  { return exitData.worldX; }
+    @Override public float      getWorldZ()  { return exitData.worldZ; }
+    public    EntranceData getExitData()     { return exitData; }
 }
