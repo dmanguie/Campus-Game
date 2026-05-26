@@ -8,6 +8,10 @@ import com.campusgame.map.data.EntranceData;
  * DOOR TRIGGER (entities/DoorTrigger.java)
  * Placed at a campus building entrance.
  * When player presses [E] within range, starts the interior transition.
+ *
+ * Phase 6: prompt text now uses EntranceData.effectivePromptName() so that
+ * renamed targetDisplayName values (set in the editor, saved to JSON) are
+ * reflected here without any other changes.
  */
 public class DoorTrigger implements Interactable {
 
@@ -24,9 +28,13 @@ public class DoorTrigger implements Interactable {
         return (dx * dx + dz * dz) <= (data.triggerRadius * data.triggerRadius);
     }
 
+    /**
+     * Returns the [E] prompt string.
+     * Uses effectivePromptName() which honours targetDisplayName → displayName → label.
+     */
     @Override
     public String getPromptText() {
-        return "Press [E] to enter " + data.label;
+        return "Press [E] to enter " + data.effectivePromptName();
     }
 
     @Override

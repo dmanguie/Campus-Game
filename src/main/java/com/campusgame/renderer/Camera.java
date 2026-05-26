@@ -3,6 +3,8 @@ package com.campusgame.renderer;
 import com.campusgame.entities.Player;
 import com.campusgame.map.CampusMap;
 
+import com.campusgame.renderer.projection.ProjectionMode;
+
 /**
  * CAMERA (renderer/Camera.java)
  * Phase 5: added setWorldBounds() and setOffset() for interior scenes + editor pan.
@@ -58,5 +60,20 @@ public class Camera {
         float maxY = Math.max(0f, worldHeight - screenHeight);
         offsetX = Math.max(0f, Math.min(offsetX, maxX));
         offsetY = Math.max(0f, Math.min(offsetY, maxY));
+    }
+
+    // In Camera.java — add field:
+    private ProjectionMode projectionMode = ProjectionMode.TOP_DOWN;
+
+    // Add setter/getter:
+    public void setProjectionMode(ProjectionMode m) { this.projectionMode = m; }
+    public ProjectionMode getProjectionMode()        { return projectionMode; }
+
+    // Add unified project helper (used by Building.drawPseudo3D):
+    public int[] project(float wx, float wz) {
+        return new int[]{
+                projectionMode.screenX(wx, wz, this),
+                projectionMode.screenY(wx, wz, this)
+        };
     }
 }

@@ -3,6 +3,8 @@ package com.campusgame.map;
 import com.campusgame.map.data.BuildingData;
 import java.awt.*;
 import java.awt.geom.AffineTransform;
+import com.campusgame.renderer.Camera;
+import com.campusgame.renderer.projection.ProjectionMode;
 
 /**
  * BUILDING (map/Building.java)
@@ -184,6 +186,44 @@ public class Building {
     public int getDepth() {
         if (data.isPolygon()) return max(data.polygonZ) - min(data.polygonZ);
         return (int) data.depth;
+    }
+
+    public void drawPseudo3D(Graphics2D g, Camera cam, ProjectionMode mode) {
+        int sx  = mode.screenX(data.x, data.z, cam);
+        int sy  = mode.screenY(data.x, data.z, cam);
+        int sw  = (int) data.width;
+        int sh  = (int) data.depth;
+        int wh  = mode.wallHeight(data.floors);   // wall extrusion upward
+
+        // --- Shadow (offset rectangle, drawn first)
+        g.setColor(new Color(0, 0, 0, 40));
+        g.fillRect(sx + 5, sy + 5, sw, sh);
+
+        // --- South wall (front face — highest Z, visible to camera)
+        //     Drawn as a parallelogram below the roof rect
+        if (wh > 0) {
+            int[] wx = { sx,      sx + sw,      sx + sw,      sx      };
+            int[] wy = { sy + sh, sy + sh,      sy + sh + wh, sy + sh + wh };
+            g.setColor(wallColor);          // roofColor.darker()
+            g.fillPolygon(wx, wy, 4);
+            // East wall
+            int[] ex = { sx + sw, sx + sw,       sx + sw,       sx + sw };
+            int[] ey = { sy,      sy + sh,        sy + sh + wh,  sy + wh };
+            g.setColor(wallColor.darker());
+            g.fillPolygon(ex, ey, 4);
+        }
+
+        // --- Roof
+        g.setColor(roofColor);
+        g.fillRect(sx, sy - wh, sw, sh);   // roof sits wh pixels above ground rect
+
+        // --- Roof border
+        g.setColor(wallColor.darker());
+        g.setStroke(new BasicStroke(1.5f));
+        g.drawRect(sx, sy - wh, sw, sh);
+        g.setStroke(new BasicStroke(1f));
+
+        drawLabel(g, sx, sy - wh, sw, sh);
     }
 
     private int min(int[] arr) { int m = arr[0]; for (int v : arr) if (v < m) m = v; return m; }

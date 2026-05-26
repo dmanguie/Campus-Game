@@ -15,7 +15,7 @@ import com.campusgame.world.interior.InteriorSceneRegistry;
 
 import java.util.List;
 
-public class EditorMode {
+public class EditorMode implements Renameable {
 
     private final CampusMap             campusMap;
     private final Camera                camera;
@@ -62,6 +62,21 @@ public class EditorMode {
         state.showStatus("ENTRANCE TOOL | Click=place | Click marker=select | C=assign scene | Del=delete");
     }
 
+    public void switchToMove()   {
+        state.setCurrentTool(EditorState.Tool.MOVE);
+        state.showStatus("MOVE TOOL — select a building, then drag to move");
+    }
+
+    public void switchToResize() {
+        state.setCurrentTool(EditorState.Tool.RESIZE);
+        state.showStatus("RESIZE TOOL — select a building, then drag corner handles");
+    }
+
+    public void switchToRotate() {
+        state.setCurrentTool(EditorState.Tool.ROTATE);
+        state.showStatus("ROTATE TOOL — select a building, then use Q/E keys to rotate ±5°");
+    }
+
     public void cycleGridSnap() {
         state.cycleGridSnap();
         state.showStatus("Grid snap: " + (int) state.getGridSnap() + " units");
@@ -86,7 +101,58 @@ public class EditorMode {
             delete(state.getCursorWorldX(), state.getCursorWorldZ());
         }
     }
+// ── Rename selected object (N key, non-ENTRANCE tool) ─────────────
 
+    /**
+     * Renames whichever object is currently selected.
+     * Routes to building rename or path rename based on active tool.
+     * Called by InputHandler via the Renameable interface.
+     */
+    @Override
+    public void renameSelected(java.awt.Component parent) {
+        EditorState.Tool tool = state.getCurrentTool();
+
+        if (tool == EditorState.Tool.PATH_EDIT) {
+            renameSelectedPath(parent);
+            return;
+        }
+
+        // Default: rename building (works in PLACE, SELECT, DELETE, SHAPE_EDIT)
+        BuildingData sel = state.getSelectedBuilding();
+        if (sel == null) {
+            state.showStatus("Select a building first (S), then press N");
+            return;
+        }
+        String input = javax.swing.JOptionPane.showInputDialog(
+                parent, "Rename building:", sel.name);
+        if (input == null || input.isBlank()) return;
+        String trimmed = input.trim();
+        state.pushUndo(campusMap.getMutableBuildings());
+        BuildingData renamed = sel.withName(trimmed);   // BuildingData.withName() already exists
+        campusMap.replaceBuilding(sel, renamed);
+        state.setSelectedBuilding(renamed);
+        autoSave();
+        state.showStatus("Renamed to: " + trimmed);
+    }
+
+    /**
+     * Renames the path currently open in the path editor.
+     * PathData.name is mutable so no copy is needed.
+     */
+    private void renameSelectedPath(java.awt.Component parent) {
+        PathEditState pe = state.getPathEdit();
+        if (!pe.isActive()) {
+            state.showStatus("Select a path first (R tool), then press N");
+            return;
+        }
+        PathData src = pe.getSource();
+        String input = javax.swing.JOptionPane.showInputDialog(
+                parent, "Rename path:", src.name);
+        if (input == null || input.isBlank()) return;
+        src.name = input.trim();
+        autoSave();
+        state.showStatus("Path renamed to: " + src.name);
+    }
     // ── Escape ────────────────────────────────────────────────────────
     public void escape() {
         if (state.getCurrentTool() == EditorState.Tool.SHAPE_EDIT) { cancelShapeEdit(); return; }
@@ -144,7 +210,7 @@ public class EditorMode {
 
         switch (state.getCurrentTool()) {
             case PLACE -> state.setGhostBuilding(makePlaceholder(wx, wz));
-            case SELECT -> {
+            case SELECT, MOVE, RESIZE, ROTATE -> {
                 state.setGhostBuilding(null);
                 BuildingData sel = state.getSelectedBuilding();
                 if (sel != null && !sel.isPolygon()) {
@@ -170,7 +236,6 @@ public class EditorMode {
             default -> state.setGhostBuilding(null);
         }
     }
-
     // ─────────────────────────────────────────────────────────────────
     // MOUSE DRAG
     // ─────────────────────────────────────────────────────────────────
@@ -233,12 +298,12 @@ public class EditorMode {
         float wz = snap(camera.screenToWorldY(screenY));
 
         switch (state.getCurrentTool()) {
-            case PLACE      -> place(wx, wz);
-            case DELETE     -> delete(wx, wz);
-            case SELECT     -> selectPress(wx, wz, screenX, screenY, false);
-            case SHAPE_EDIT -> shapeEditPress(screenX, screenY);
-            case PATH_EDIT  -> pathEditClick(wx, wz, screenX, screenY);
-            case ENTRANCE   -> entranceClick(wx, wz, screenX, screenY);
+            case PLACE                        -> place(wx, wz);
+            case DELETE                       -> delete(wx, wz);
+            case SELECT, MOVE, RESIZE, ROTATE -> selectPress(wx, wz, screenX, screenY, false);
+            case SHAPE_EDIT                   -> shapeEditPress(screenX, screenY);
+            case PATH_EDIT                    -> pathEditClick(wx, wz, screenX, screenY);
+            case ENTRANCE                     -> entranceClick(wx, wz, screenX, screenY);
         }
     }
 
@@ -255,7 +320,7 @@ public class EditorMode {
     public void onLeftRelease(int screenX, int screenY) {
         if (!state.isActive()) return;
         switch (state.getCurrentTool()) {
-            case SELECT -> {
+            case SELECT, MOVE, RESIZE, ROTATE -> {
                 if (state.getActiveHandleIdx() >= 0) { commitResizeDrag(); return; }
                 if (state.dragState.active)           { commitDragMove();   return; }
                 if (state.boxSelecting) {
@@ -403,13 +468,27 @@ public class EditorMode {
                 return;
             }
         }
+
         BuildingData hit = hitTest(wx, wz);
         if (hit != null) {
-            if (addToMulti) { state.addToMultiSelect(hit); state.showStatus("Multi-select: " + state.getMultiSelect().size()); return; }
+            if (addToMulti) {
+                state.addToMultiSelect(hit);
+                state.showStatus("Multi-select: " + state.getMultiSelect().size());
+                return;
+            }
             if (!state.isMultiSelected(hit)) state.clearMultiSelect();
             state.setSelectedBuilding(hit);
-            state.dragState.begin(wx, wz, hit.x, hit.z);
-            state.showStatus("Selected: " + hit.name + "  (drag to move)");
+
+            // Only begin drag-move when SELECT or MOVE tool is active
+            EditorState.Tool tool = state.getCurrentTool();
+            if (tool == EditorState.Tool.SELECT || tool == EditorState.Tool.MOVE) {
+                state.dragState.begin(wx, wz, hit.x, hit.z);
+                state.showStatus("Selected: " + hit.name + "  (drag to move)");
+            } else if (tool == EditorState.Tool.RESIZE) {
+                state.showStatus("Selected: " + hit.name + "  — drag a corner handle to resize");
+            } else if (tool == EditorState.Tool.ROTATE) {
+                state.showStatus("Selected: " + hit.name + "  — Q = rotate left  E = rotate right");
+            }
         } else {
             state.setSelectedBuilding(null); state.clearMultiSelect();
             state.boxSelecting = true;

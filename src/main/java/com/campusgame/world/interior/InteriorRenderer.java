@@ -1,20 +1,19 @@
 package com.campusgame.world.interior;
 
+import com.campusgame.entities.Player;
 import com.campusgame.map.data.EntranceData;
 import com.campusgame.renderer.Camera;
 import java.awt.*;
 
 /**
  * INTERIOR RENDERER (world/interior/InteriorRenderer.java)
- * Draws an active InteriorScene onto the back buffer.
- * Called by Renderer instead of the normal exterior pipeline
- * when InteriorManager.isIndoors() == true.
  *
  * Draw order:
  *   1. Background fill
  *   2. Rooms (floor + walls + label)
- *   3. Exit door markers
- *   4. Top HUD strip (scene name breadcrumb)
+ *   3. Player
+ *   4. Exit door markers
+ *   5. Top HUD strip
  */
 public class InteriorRenderer {
 
@@ -24,13 +23,27 @@ public class InteriorRenderer {
     private static final Color HUD_BG      = new Color(0, 0, 0, 185);
 
     public void draw(Graphics2D g, InteriorScene scene, Camera camera,
-                     int screenW, int screenH) {
+                     int screenW, int screenH, Player player) {
+
+        // 1. Background fill
         g.setColor(scene.backgroundColor);
         g.fillRect(0, 0, screenW, screenH);
 
+        // 2. Rooms
         for (InteriorRoom room : scene.rooms) drawRoom(g, room, camera);
-        for (EntranceData exit : scene.exits)  drawExit(g, exit, camera);
 
+        // 3. Player — drawn between rooms and exit markers so it
+        //    appears on top of the floor but under the exit overlay
+        if (player != null) {
+            int psx = camera.worldToScreenX(player.getCenterX());
+            int psy = camera.worldToScreenY(player.getCenterY());
+            player.draw(g, psx, psy);
+        }
+
+        // 4. Exit door markers
+        for (EntranceData exit : scene.exits) drawExit(g, exit, camera);
+
+        // 5. HUD strip
         drawHudStrip(g, scene, screenW);
     }
 
@@ -52,11 +65,11 @@ public class InteriorRenderer {
         g.setFont(new Font("SansSerif", Font.PLAIN, 11));
         FontMetrics fm = g.getFontMetrics();
         int lw = fm.stringWidth(room.displayName);
-        int lx = rx + rw/2 - lw/2;
+        int lx = rx + rw / 2 - lw / 2;
         int ly = rz + 18;
 
         g.setColor(LABEL_BG);
-        g.fillRoundRect(lx-5, ly-13, lw+10, 17, 4, 4);
+        g.fillRoundRect(lx - 5, ly - 13, lw + 10, 17, 4, 4);
         g.setColor(new Color(50, 40, 30, 200));
         g.drawString(room.displayName, lx, ly);
     }
@@ -67,23 +80,23 @@ public class InteriorRenderer {
 
         g.setColor(EXIT_GREEN);
         g.setStroke(new BasicStroke(3f));
-        g.drawRect(sx-18, sz-6, 36, 24);
+        g.drawRect(sx - 18, sz - 6, 36, 24);
         g.setStroke(new BasicStroke(1f));
 
         g.setColor(new Color(70, 200, 110, 80));
-        g.fillRect(sx-18, sz-6, 36, 24);
+        g.fillRect(sx - 18, sz - 6, 36, 24);
 
         g.setColor(EXIT_GREEN);
-        g.fillOval(sx+9, sz+4, 5, 5);
+        g.fillOval(sx + 9, sz + 4, 5, 5);
 
         g.setStroke(new BasicStroke(2.5f));
-        g.drawArc(sx-18, sz-24, 36, 36, 0, 180);
+        g.drawArc(sx - 18, sz - 24, 36, 36, 0, 180);
         g.setStroke(new BasicStroke(1f));
 
         g.setFont(new Font("SansSerif", Font.BOLD, 10));
         FontMetrics fm = g.getFontMetrics();
         g.setColor(new Color(40, 160, 80));
-        g.drawString("EXIT", sx - fm.stringWidth("EXIT")/2, sz-28);
+        g.drawString("EXIT", sx - fm.stringWidth("EXIT") / 2, sz - 28);
     }
 
     private void drawHudStrip(Graphics2D g, InteriorScene scene, int screenW) {

@@ -11,32 +11,48 @@
     <packaging>jar</packaging>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <dependencies>
-        <!-- Phase 3: Gson for JSON map save/load -->
+        <!-- Gson -->
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>2.10.1</version>
         </dependency>
 
-        <!-- Phase 4 (future): Uncomment when ready for 3D -->
-        <!--
+        <!-- LWJGL BOM -->
         <dependency>
             <groupId>org.lwjgl</groupId>
-            <artifactId>lwjgl</artifactId>
+            <artifactId>lwjgl-bom</artifactId>
             <version>3.3.3</version>
+            <scope>import</scope>
+            <type>pom</type>
         </dependency>
-        -->
+
+        <!-- LWJGL core modules -->
+        <dependency><groupId>org.lwjgl</groupId><artifactId>lwjgl</artifactId><version>3.3.3</version></dependency>
+        <dependency><groupId>org.lwjgl</groupId><artifactId>lwjgl-glfw</artifactId><version>3.3.3</version></dependency>
+        <dependency><groupId>org.lwjgl</groupId><artifactId>lwjgl-opengl</artifactId><version>3.3.3</version></dependency>
+
+        <!-- LWJGL natives for Windows 64-bit -->
+        <dependency><groupId>org.lwjgl</groupId><artifactId>lwjgl</artifactId><version>3.3.3</version><classifier>natives-windows</classifier></dependency>
+        <dependency><groupId>org.lwjgl</groupId><artifactId>lwjgl-glfw</artifactId><version>3.3.3</version><classifier>natives-windows</classifier></dependency>
+        <dependency><groupId>org.lwjgl</groupId><artifactId>lwjgl-opengl</artifactId><version>3.3.3</version><classifier>natives-windows</classifier></dependency>
+
+        <!-- JOML -->
+        <dependency>
+            <groupId>org.joml</groupId>
+            <artifactId>joml</artifactId>
+            <version>1.10.5</version>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
-            <!-- Creates a runnable JAR with Main as entry point -->
+            <!-- Runnable JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -47,6 +63,22 @@
                             <mainClass>com.campusgame.main.Main</mainClass>
                         </manifest>
                     </archive>
+                </configuration>
+            </plugin>
+
+            <!-- 3D prototype launcher + native library path -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <mainClass>com.campusgame.renderer.lwjgl3d.Prototype3DLauncher</mainClass>
+                    <systemProperties>
+                        <systemProperty>
+                            <key>java.library.path</key>
+                            <value>${project.build.directory}/natives</value>
+                        </systemProperty>
+                    </systemProperties>
                 </configuration>
             </plugin>
         </plugins>

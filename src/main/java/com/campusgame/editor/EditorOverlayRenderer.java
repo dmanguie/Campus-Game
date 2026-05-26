@@ -46,6 +46,7 @@ public class EditorOverlayRenderer {
         drawPathEdit(g, screenW);
         drawEntranceLegend(g, screenW);
         drawScenePicker(g);
+        drawToolHUD(g, screenW, screenH);  // ← was missing
         drawStatus(g, screenW, screenH);
     }
 
@@ -57,12 +58,18 @@ public class EditorOverlayRenderer {
 
         String toolLabel = switch (state.getCurrentTool()) {
             case PLACE      -> "[ P ] PLACE";
-            case SELECT     -> "[ S ] SELECT";
+            case SELECT     -> "[ Q ] SELECT";
+            case MOVE       -> "[ W ] MOVE";
+            case RESIZE     -> "[ E ] RESIZE";
+            case ROTATE     -> "[ R ] ROTATE";
+            case PATH_EDIT  -> "[ T ] PATH";
             case DELETE     -> "[ X ] DELETE";
             case SHAPE_EDIT -> "[ V ] SHAPE EDIT";
-            case PATH_EDIT  -> "[ R ] PATH EDIT";
             case ENTRANCE   -> "[ N ] ENTRANCE";
         };
+
+
+
         g.setColor(Color.WHITE);
         FontMetrics fm = g.getFontMetrics();
         g.drawString(toolLabel, screenW/2 - fm.stringWidth(toolLabel)/2, 19);
@@ -335,4 +342,35 @@ public class EditorOverlayRenderer {
         g.setColor(STATUS_BG); g.fillRoundRect(tx-8,ty-16,tw+16,22,6,6);
         g.setColor(new Color(100,255,140)); g.drawString(msg,tx,ty);
     }
+
+    // ── Tool HUD ──────────────────────────────────────────────────────
+    private void drawToolHUD(Graphics2D g, int screenW, int screenH) {
+        if (state.getCurrentTool() == EditorState.Tool.SHAPE_EDIT
+                || state.getCurrentTool() == EditorState.Tool.PATH_EDIT
+                || state.getCurrentTool() == EditorState.Tool.ENTRANCE) return;
+        EditorState.Tool cur = state.getCurrentTool();
+        String[] tools = {"[Q] Select","[W] Move","[E] Resize","[R] Rotate","[T] Path"};
+        EditorState.Tool[] toolVals = {
+                EditorState.Tool.SELECT, EditorState.Tool.MOVE,
+                EditorState.Tool.RESIZE, EditorState.Tool.ROTATE,
+                EditorState.Tool.PATH_EDIT
+        };
+        g.setFont(new Font("Consolas", Font.BOLD, 11));
+        FontMetrics fm = g.getFontMetrics();
+        int pad = 8, gap = 6;
+        int startX = 10;
+        int startY = screenH - 38;
+        for (int i = 0; i < tools.length; i++) {
+            int w = fm.stringWidth(tools[i]) + pad * 2;
+            boolean active = (cur == toolVals[i]);
+            g.setColor(active ? new Color(255, 220, 50, 220) : new Color(20, 20, 20, 190));
+            g.fillRoundRect(startX, startY, w, 22, 5, 5);
+            g.setColor(active ? new Color(50, 40, 0) : new Color(180, 180, 180));
+            g.drawRoundRect(startX, startY, w, 22, 5, 5);
+            g.setColor(active ? new Color(30, 20, 0) : new Color(200, 200, 200));
+            g.drawString(tools[i], startX + pad, startY + 15);
+            startX += w + gap;
+        }
+    }
+
 }

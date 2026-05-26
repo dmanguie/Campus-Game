@@ -9,7 +9,7 @@ import java.util.*;
 
 public class EditorState {
 
-    public enum Tool { PLACE, SELECT, DELETE, SHAPE_EDIT, PATH_EDIT, ENTRANCE }
+    public enum Tool { PLACE, SELECT, DELETE, SHAPE_EDIT, PATH_EDIT, ENTRANCE, MOVE, RESIZE, ROTATE }
 
     private boolean active = false;
     public boolean  isActive()           { return active; }
@@ -18,7 +18,7 @@ public class EditorState {
         active = !active;
         if (!active) { multiSelect.clear(); dragState.cancel(); }
         showStatus(active
-                ? "EDITOR ON  |  P=Place  S=Select  X=Delete  V=Shape  R=Path  N=Entrance  F1=Exit"
+                ? "EDITOR ON  |  Q=Select  W=Move  E=Resize  R=Rotate  T=Path  P=Place  X=Delete  F1=Exit"
                 : "[ EDITOR OFF ]");
     }
 

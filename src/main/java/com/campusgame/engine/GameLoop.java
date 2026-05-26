@@ -94,7 +94,7 @@ public class GameLoop implements Runnable {
         interactionPrompt = new InteractionPrompt();
 
         // Interior manager
-        interiorManager   = new InteriorManager(sceneRegistry, interactionSystem, doorTriggers);
+        interiorManager    = new InteriorManager(sceneRegistry, interactionSystem, doorTriggers);
         interactionContext = new InteractionContext(player, camera, interiorManager);
 
         // Wire [E] key
@@ -106,15 +106,36 @@ public class GameLoop implements Runnable {
         editorInput = new EditorInputAdapter(editorMode);
         inputHandler.setEditor(editorMode);
 
-        EditorOverlayRenderer overlay = new EditorOverlayRenderer(
+        // Interior editor
+        com.campusgame.editor.InteriorEditorMode interiorEditorMode =
+                new com.campusgame.editor.InteriorEditorMode(camera);
+        com.campusgame.editor.InteriorEditorInputAdapter interiorEditorInput =
+                new com.campusgame.editor.InteriorEditorInputAdapter(interiorEditorMode);
+        inputHandler.setInteriorEditor(interiorEditorMode);
+
+        // Controls overlay (F2 = gameplay, F3 = editor)
+        com.campusgame.editor.ControlsOverlay controlsOverlay =
+                new com.campusgame.editor.ControlsOverlay();
+        inputHandler.setControlsOverlay(controlsOverlay);
+        swingPanel.setControlsOverlay(controlsOverlay);
+
+        // Overlays
+        EditorOverlayRenderer editorOverlay = new EditorOverlayRenderer(
                 editorMode.getState(), campusMap, camera);
-        swingPanel.setEditorOverlay(overlay);
+        com.campusgame.editor.InteriorEditorOverlayRenderer interiorEditorOverlay =
+                new com.campusgame.editor.InteriorEditorOverlayRenderer(
+                        interiorEditorMode, camera);
+
+        swingPanel.setEditorOverlay(editorOverlay);
+        swingPanel.setInteriorEditorOverlay(interiorEditorOverlay);
         swingPanel.setInteriorManager(interiorManager);
         swingPanel.setInteractionSystem(interactionSystem);
         swingPanel.setInteractionPrompt(interactionPrompt);
 
         swingPanel.addMouseListener(editorInput);
         swingPanel.addMouseMotionListener(editorInput);
+        swingPanel.addMouseListener(interiorEditorInput);
+        swingPanel.addMouseMotionListener(interiorEditorInput);
 
         // Window
         frame = new JFrame(TITLE + "  [" + activeRenderer.getBackendName() + "]");

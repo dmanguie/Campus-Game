@@ -11,7 +11,8 @@ import java.util.List;
  * Gson-friendly POJO that mirrors campus.json exactly.
  * No domain logic — pure serialization boundary.
  *
- * Phase 5: added EntranceJson for door/entrance data.
+ * Phase 5 : added EntranceJson for door/entrance data.
+ * Phase 6 : added displayName + targetDisplayName to EntranceJson for runtime rename.
  *
  * PathJson field alignment with PathData:
  *   PathJson.width    ↔ PathData.width
@@ -25,7 +26,7 @@ public class MapJson {
     public MapMeta            mapMeta;
     public List<PathJson>     paths;
     public List<BuildingJson> buildings;
-    public List<EntranceJson> entrances;   // Phase 5
+    public List<EntranceJson> entrances;
 
     // ── Map metadata ─────────────────────────────────────────────────
     public static class MapMeta {
@@ -80,10 +81,8 @@ public class MapJson {
          * (strokeWidth/colorARGB) so existing campus.json files still load.
          */
         public PathData toPathData() {
-            // Resolve width — prefer new name, fall back to old
-            float   resolvedWidth    = (width > 0) ? width : (strokeWidth > 0 ? strokeWidth : 55f);
-            // Resolve color — prefer new name, fall back to old
-            String  resolvedColorHex = (colorHex != null && !colorHex.isEmpty())
+            float  resolvedWidth    = (width > 0) ? width : (strokeWidth > 0 ? strokeWidth : 55f);
+            String resolvedColorHex = (colorHex != null && !colorHex.isEmpty())
                     ? colorHex
                     : (colorARGB != null ? colorARGB : "#FFDCD7C8");
 
@@ -96,11 +95,17 @@ public class MapJson {
         }
     }
 
-    // ── Entrance JSON (Phase 5) ───────────────────────────────────────
+    // ── Entrance JSON ─────────────────────────────────────────────────
     public static class EntranceJson {
         public String id;
         public String buildingName;
         public String label;
+
+        // Phase 6: rename fields — written on save, read on load.
+        // Absent in old JSON → Gson leaves them null → fallback to label.
+        public String displayName;
+        public String targetDisplayName;
+
         public float  worldX;
         public float  worldZ;
         public float  triggerRadius;
@@ -112,22 +117,26 @@ public class MapJson {
 
         public EntranceJson() {}
 
+        /** EntranceData → EntranceJson for saving. */
         public static EntranceJson from(EntranceData e) {
-            EntranceJson j    = new EntranceJson();
-            j.id              = e.id;
-            j.buildingName    = e.buildingName;
-            j.label           = e.label;
-            j.worldX          = e.worldX;
-            j.worldZ          = e.worldZ;
-            j.triggerRadius   = e.triggerRadius;
-            j.interiorSceneId = e.interiorSceneId;
-            j.interiorSpawnX  = e.interiorSpawnX;
-            j.interiorSpawnZ  = e.interiorSpawnZ;
-            j.exteriorSpawnX  = e.exteriorSpawnX;
-            j.exteriorSpawnZ  = e.exteriorSpawnZ;
+            EntranceJson j      = new EntranceJson();
+            j.id                = e.id;
+            j.buildingName      = e.buildingName;
+            j.label             = e.label;
+            j.displayName       = e.displayName;
+            j.targetDisplayName = e.targetDisplayName;
+            j.worldX            = e.worldX;
+            j.worldZ            = e.worldZ;
+            j.triggerRadius     = e.triggerRadius;
+            j.interiorSceneId   = e.interiorSceneId;
+            j.interiorSpawnX    = e.interiorSpawnX;
+            j.interiorSpawnZ    = e.interiorSpawnZ;
+            j.exteriorSpawnX    = e.exteriorSpawnX;
+            j.exteriorSpawnZ    = e.exteriorSpawnZ;
             return j;
         }
 
+        /** EntranceJson → EntranceData for loading. Gracefully handles old JSON without rename fields. */
         public EntranceData toEntranceData() {
             EntranceData e  = new EntranceData(
                     id, buildingName, label,
@@ -136,6 +145,11 @@ public class MapJson {
                     interiorSpawnX, interiorSpawnZ,
                     exteriorSpawnX, exteriorSpawnZ);
             e.triggerRadius = triggerRadius > 0 ? triggerRadius : 55f;
+
+            // Restore rename fields — fall back gracefully if absent (old JSON)
+            e.displayName       = (displayName != null && !displayName.isBlank())
+                    ? displayName : label;
+            e.targetDisplayName = (targetDisplayName != null) ? targetDisplayName : "";
             return e;
         }
     }

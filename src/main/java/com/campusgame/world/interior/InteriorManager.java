@@ -13,21 +13,7 @@ import java.util.List;
 
 /**
  * INTERIOR MANAGER (world/interior/InteriorManager.java)
- * -------------------------------------------------------
  * Owns the exterior ↔ interior transition lifecycle.
- *
- * ENTERING a building:
- *   DoorTrigger.onInteract() → enterScene()
- *   → SceneTransition FADE_OUT
- *   → SWITCH: player teleported, scene activated, camera re-clamped,
- *             InteractionSystem swapped to exit triggers
- *   → FADE_IN
- *
- * EXITING a building:
- *   ExitTrigger.onInteract() → exitToExterior()
- *   → same fade cycle in reverse
- *   → player returned to saved exterior position
- *   → InteractionSystem swapped back to door triggers
  */
 public class InteriorManager {
 
@@ -98,6 +84,10 @@ public class InteriorManager {
                 ? pendingEntrance.interiorSpawnX : currentScene.defaultSpawnX;
         float sz = pendingEntrance.interiorSpawnZ > 0
                 ? pendingEntrance.interiorSpawnZ : currentScene.defaultSpawnZ;
+
+        sx = Math.max(10f, Math.min(sx, currentScene.width  - 10f));
+        sz = Math.max(10f, Math.min(sz, currentScene.height - 10f));
+
         player.x = sx;
         player.z = sz;
 
@@ -128,10 +118,14 @@ public class InteriorManager {
 
     // ── Draw API ──────────────────────────────────────────────────────
 
+    /**
+     * Draws the interior scene including the player.
+     * @return true if interior was drawn (Renderer skips exterior pipeline).
+     */
     public boolean drawIfIndoors(Graphics2D g, Camera camera,
-                                 int screenW, int screenH) {
+                                 int screenW, int screenH, Player player) {
         if (currentScene == null) return false;
-        renderer.draw(g, currentScene, camera, screenW, screenH);
+        renderer.draw(g, currentScene, camera, screenW, screenH, player);
         return true;
     }
 
