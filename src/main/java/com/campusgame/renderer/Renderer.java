@@ -143,11 +143,22 @@ public class Renderer extends JPanel {
 
         for (Building b : campusMap.getBuildings()) {
             float sortZ = computeBuildingSortZ(b, mode);
+            float zoom = camera.getZoom();
+            boolean editorActive = editorOverlay != null
+                    && editorOverlay.getState().isActive();
+
             if (mode == ProjectionMode.TOP_DOWN) {
-                scene.add(new RenderObject(sortZ, () -> b.draw(g, ox, oy)));
+                if (editorActive) {
+                    scene.add(new RenderObject(sortZ, () -> b.drawEditor(g, ox, oy, zoom)));
+                } else {
+                    scene.add(new RenderObject(sortZ, () -> b.draw(g, ox, oy, zoom)));
+                }
             } else {
-                scene.add(new RenderObject(sortZ,
-                        () -> b.drawPseudo3D(g, camera, mode)));
+                if (editorActive) {
+                    scene.add(new RenderObject(sortZ, () -> b.drawPseudo3DEditor(g, camera, mode)));
+                } else {
+                    scene.add(new RenderObject(sortZ, () -> b.drawPseudo3D(g, camera, mode)));
+                }
             }
         }
 

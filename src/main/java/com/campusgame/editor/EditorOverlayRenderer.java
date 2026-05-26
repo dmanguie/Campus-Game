@@ -31,10 +31,14 @@ public class EditorOverlayRenderer {
     private static final Color ENTRANCE_SEL    = new Color(255,220, 50,240);
     private static final Color ENTRANCE_GHOST  = new Color(120,220,160,120);
     private static final Color ENTRANCE_LABEL  = new Color( 60,200,100,220);
+    private final javax.swing.JComponent parentComponent;
 
-    public EditorOverlayRenderer(EditorState state, CampusMap campusMap, Camera camera) {
+    public EditorOverlayRenderer(EditorState state, CampusMap campusMap, Camera camera,
+                                 javax.swing.JComponent parentComponent) {
         this.state = state; this.campusMap = campusMap; this.camera = camera;
+        this.parentComponent = parentComponent;
     }
+    public EditorState getState() { return state; }
 
     public void draw(Graphics2D g, int screenW, int screenH) {
         if (!state.isActive()) return;
@@ -43,7 +47,7 @@ public class EditorOverlayRenderer {
         drawSelection(g);
         drawEntrances(g);
         drawShapeEdit(g, screenW);
-        drawPathEdit(g, screenW);
+        drawPathEdit(g, screenW)    ;
         drawEntranceLegend(g, screenW);
         drawScenePicker(g);
         drawToolHUD(g, screenW, screenH);  // ← was missing

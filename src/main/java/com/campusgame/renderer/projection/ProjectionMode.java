@@ -19,11 +19,11 @@ public enum ProjectionMode {
         // Wall height shrinks with distance (no perspective — isometric style)
         private static final float FLOOR_PX = 14f; // pixels per floor at base zoom
 
-        @Override public int screenX(float wx, float wz, Camera c) {
-            return c.worldToScreenX(wx);
+        @Override public int screenX(float wx, float wz, Camera cam) {
+            return (int)((wx - cam.getOffsetXf()) * cam.getZoom());
         }
-        @Override public int screenY(float wx, float wz, Camera c) {
-            return c.worldToScreenY(wz);
+        @Override public int screenY(float wx, float wz, Camera cam) {
+            return (int)((wz - cam.getOffsetYf()) * cam.getZoom());
         }
         @Override public int wallHeight(int floors) {
             return (int)(floors * FLOOR_PX);
@@ -31,17 +31,15 @@ public enum ProjectionMode {
     },
 
     ISOMETRIC {
-        // Classic 2:1 isometric tile projection
-        // worldX, worldZ → screen using standard iso matrix
         @Override public int screenX(float wx, float wz, Camera c) {
-            // iso: screenX = (wx - wz) * cos(30°)  ≈  (wx - wz) * 0.866
+            // Standard iso: screenX = (wx - wz) * 0.5, centered on screen
             float iso = (wx - wz) * 0.5f;
-            return c.worldToScreenX(iso + c.getScreenWidth() / 2f);
+            // Treat iso as a world coordinate, apply offset + zoom manually
+            return (int)((iso - c.getOffsetXf()) * c.getZoom()) + c.getScreenWidth() / 2;
         }
         @Override public int screenY(float wx, float wz, Camera c) {
-            // iso: screenY = (wx + wz) * sin(30°)  ≈  (wx + wz) * 0.5
             float iso = (wx + wz) * 0.25f;
-            return c.worldToScreenY(iso);
+            return (int)((iso - c.getOffsetYf()) * c.getZoom());
         }
         @Override public int wallHeight(int floors) {
             return floors * 10;

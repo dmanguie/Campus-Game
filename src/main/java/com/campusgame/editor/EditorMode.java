@@ -497,6 +497,10 @@ public class EditorMode implements Renameable {
         }
     }
 
+    public void onMouseWheel(int screenX, int screenY, int wheelRotation) {
+        camera.zoomAt(screenX, screenY, wheelRotation);
+    }
+
     private void commitDragMove() {
         BuildingData sel = state.getSelectedBuilding();
         if (sel == null) { state.dragState.cancel(); return; }

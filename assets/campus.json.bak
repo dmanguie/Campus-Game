@@ -4,7 +4,7 @@
     "worldWidth": 3000,
     "worldHeight": 2400,
     "author": "Admin",
-    "lastModified": "2026-05-26T19:04:33.900436400Z",
+    "lastModified": "2026-05-26T19:41:32.937432600Z",
     "description": "Editor save"
   },
   "paths": [
@@ -112,8 +112,8 @@
     },
     {
       "name": "LRAC",
-      "x": 980.0,
-      "z": 960.0,
+      "x": 960.0,
+      "z": 900.0,
       "width": 320.0,
       "depth": 140.0,
       "floors": 2,
@@ -393,6 +393,20 @@
     {
       "name": "BASTA",
       "x": 560.0,
+      "z": 1000.0,
+      "width": 120.0,
+      "depth": 100.0,
+      "floors": 2,
+      "colorARGB": "#FF888888",
+      "rotationDegrees": 0.0,
+      "collisionEnabled": true,
+      "tag": "building",
+      "polygonX": null,
+      "polygonZ": null
+    },
+    {
+      "name": "NEW BLDG 2",
+      "x": 1220.0,
       "z": 1000.0,
       "width": 120.0,
       "depth": 100.0,

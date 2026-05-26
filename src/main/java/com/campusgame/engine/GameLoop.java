@@ -121,7 +121,7 @@ public class GameLoop implements Runnable {
 
         // Overlays
         EditorOverlayRenderer editorOverlay = new EditorOverlayRenderer(
-                editorMode.getState(), campusMap, camera);
+                editorMode.getState(), campusMap, camera, swingPanel);
         com.campusgame.editor.InteriorEditorOverlayRenderer interiorEditorOverlay =
                 new com.campusgame.editor.InteriorEditorOverlayRenderer(
                         interiorEditorMode, camera);
@@ -134,6 +134,7 @@ public class GameLoop implements Runnable {
 
         swingPanel.addMouseListener(editorInput);
         swingPanel.addMouseMotionListener(editorInput);
+        swingPanel.addMouseWheelListener(editorInput);
         swingPanel.addMouseListener(interiorEditorInput);
         swingPanel.addMouseMotionListener(interiorEditorInput);
 

@@ -4,7 +4,7 @@
     "worldWidth": 3000,
     "worldHeight": 2400,
     "author": "Admin",
-    "lastModified": "2026-05-26T19:04:37.664147800Z",
+    "lastModified": "2026-05-26T19:41:35.647158800Z",
     "description": "Editor save"
   },
   "paths": [
@@ -112,8 +112,8 @@
     },
     {
       "name": "LRAC",
-      "x": 980.0,
-      "z": 960.0,
+      "x": 960.0,
+      "z": 900.0,
       "width": 320.0,
       "depth": 140.0,
       "floors": 2,

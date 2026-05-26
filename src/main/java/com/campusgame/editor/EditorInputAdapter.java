@@ -13,7 +13,7 @@ public class EditorInputAdapter extends MouseAdapter implements MouseMotionListe
 
     @Override
     public void mousePressed(MouseEvent e) {
-        int x=e.getX(), y=e.getY();
+        int x = e.getX(), y = e.getY();
         switch (e.getButton()) {
             case MouseEvent.BUTTON1 -> editor.onLeftClick(x, y);
             case MouseEvent.BUTTON2 -> editor.onMiddleClick(x, y);
@@ -24,5 +24,10 @@ public class EditorInputAdapter extends MouseAdapter implements MouseMotionListe
     @Override
     public void mouseReleased(MouseEvent e) {
         if (e.getButton() == MouseEvent.BUTTON1) editor.onLeftRelease(e.getX(), e.getY());
+    }
+
+    @Override
+    public void mouseWheelMoved(MouseWheelEvent e) {
+        editor.onMouseWheel(e.getX(), e.getY(), e.getWheelRotation());
     }
 }
