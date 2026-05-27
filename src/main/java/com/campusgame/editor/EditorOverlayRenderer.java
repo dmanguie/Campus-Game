@@ -80,7 +80,7 @@ public class EditorOverlayRenderer {
 
         g.setColor(new Color(180,180,180));
         g.setFont(new Font("SansSerif",Font.PLAIN,11));
-        String hint = "F1=Exit  P=Place  S=Select  X=Delete  V=Shape  R=Path  N=Entrance  Ctrl+S=Save";
+        String hint = "F1=Exit  P=Place  S=Select  X=Delete  V=Shape  R=Path  N=Entrance =/- Floors  Ctrl+S=Save";
         g.drawString(hint, screenW - g.getFontMetrics().stringWidth(hint) - 10, 19);
     }
 

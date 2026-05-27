@@ -748,6 +748,47 @@ public class EditorMode implements Renameable {
         campusMap.replaceBuilding(sel, u); state.setSelectedBuilding(u); autoSave();
     }
 
+    public void increaseFloors() {
+        BuildingData sel = state.getSelectedBuilding();
+        if (sel == null) { state.showStatus("Select a building first"); return; }
+        state.pushUndo(campusMap.getMutableBuildings());
+        BuildingData u;
+        if (sel.isPolygon()) {
+            u = new BuildingData(sel.name, sel.polygonX, sel.polygonZ,
+                    sel.floors + 1, sel.colorARGB, sel.rotationDegrees,
+                    sel.collisionEnabled, sel.tag);
+        } else {
+            u = new BuildingData(sel.name, sel.x, sel.z, sel.width, sel.depth,
+                    sel.floors + 1, sel.colorARGB, sel.rotationDegrees,
+                    sel.collisionEnabled, sel.tag);
+        }
+        campusMap.replaceBuilding(sel, u);
+        state.setSelectedBuilding(u);
+        autoSave();
+        state.showStatus(u.name + " → " + u.floors + " floor(s)");
+    }
+
+    public void decreaseFloors() {
+        BuildingData sel = state.getSelectedBuilding();
+        if (sel == null) { state.showStatus("Select a building first"); return; }
+        if (sel.floors <= 1) { state.showStatus("Minimum 1 floor"); return; }
+        state.pushUndo(campusMap.getMutableBuildings());
+        BuildingData u;
+        if (sel.isPolygon()) {
+            u = new BuildingData(sel.name, sel.polygonX, sel.polygonZ,
+                    sel.floors - 1, sel.colorARGB, sel.rotationDegrees,
+                    sel.collisionEnabled, sel.tag);
+        } else {
+            u = new BuildingData(sel.name, sel.x, sel.z, sel.width, sel.depth,
+                    sel.floors - 1, sel.colorARGB, sel.rotationDegrees,
+                    sel.collisionEnabled, sel.tag);
+        }
+        campusMap.replaceBuilding(sel, u);
+        state.setSelectedBuilding(u);
+        autoSave();
+        state.showStatus(u.name + " → " + u.floors + " floor(s)");
+    }
+
     public void saveMap() {
         MapJson.MapMeta meta = loadedMeta != null ? loadedMeta
                 : new MapJson.MapMeta("Main Campus", 3000, 2400, "Admin", "Editor save");

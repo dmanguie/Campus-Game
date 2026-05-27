@@ -161,7 +161,7 @@ public class InputHandler extends KeyAdapter {
         }
 
         // Layer hotkeys (Alt+1-5 = lock, 1-5 = visibility)
-        LayerManager lm = state.getLayerManager();   // ← only ONE declaration, the duplicate is deleted
+        LayerManager lm = state.getLayerManager();
         if (alt) {
             String msg = switch (key) {
                 case KeyEvent.VK_1 -> lm.handleLockHotkey(1);
@@ -197,6 +197,8 @@ public class InputHandler extends KeyAdapter {
             case KeyEvent.VK_S -> { if (ctrl) editor.saveMap(); else editor.switchToSelect(); }
             case KeyEvent.VK_G -> editor.cycleGridSnap();
             case KeyEvent.VK_Z -> { if (ctrl) editor.undo(); }
+            case KeyEvent.VK_EQUALS, KeyEvent.VK_ADD      -> editor.increaseFloors();
+            case KeyEvent.VK_MINUS,  KeyEvent.VK_SUBTRACT -> editor.decreaseFloors();
             case KeyEvent.VK_DELETE    -> editor.deleteSelected();
             case KeyEvent.VK_ESCAPE    -> editor.escape();
             case KeyEvent.VK_PAGE_UP   -> editor.nextFloor();
